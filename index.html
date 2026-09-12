@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Grade Portal</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+          <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+        </svg>
+        <h1>Student Grade Portal</h1>
+      </div>
+      <p class="subtitle">Access your academic performance anytime, anywhere</p>
+    </header>
+
+    <!-- Search Section -->
+    <section class="search-section">
+      <div class="search-card">
+        <label for="studentNumber" class="input-label">Enter Student Number</label>
+        <div class="input-group">
+          <input
+            type="text"
+            id="studentNumber"
+            placeholder="e.g. 2301234567"
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <button id="checkBtn" onclick="checkGrades()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.35-4.35"/>
+            </svg>
+            Check Grades
+          </button>
+        </div>
+        <p class="input-hint">Enter your 10-digit student number to view your grades</p>
+      </div>
+    </section>
+
+    <!-- Message Area -->
+    <div id="messageArea" class="message-area hidden"></div>
+
+    <!-- Results Section -->
+    <section id="resultsSection" class="results-section hidden">
+      <!-- Student Info -->
+      <div class="student-info">
+        <div class="student-avatar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        <div class="student-details">
+          <h2 id="studentName" class="student-name"></h2>
+          <p class="student-number-label">Student No.: <span id="studentNo" class="student-number"></span></p>
+        </div>
+      </div>
+
+      <!-- Grades Section -->
+      <div class="grades-container">
+        <div class="grades-header">
+          <h3>Academic Grades</h3>
+          <span class="term-badge">SY 2025-2026</span>
+        </div>
+        <div id="gradesBody" class="grades-body">
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
