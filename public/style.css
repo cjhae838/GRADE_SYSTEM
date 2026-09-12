@@ -12,30 +12,29 @@
   --primary-dark: #1d4ed8;
   --primary-light: #dbeafe;
   --primary-glow: rgba(37, 99, 235, 0.15);
-  --bg: #f1f5f9;
-  --surface: #ffffff;
-  --surface-hover: #f8fafc;
-  --text: #0f172a;
-  --text-secondary: #64748b;
-  --text-muted: #94a3b8;
-  --border: #e2e8f0;
-  --border-light: #f1f5f9;
+  --bg: #e0e5ec;
+  --surface: #e0e5ec;
+  --surface-hover: #d5dbe3;
+  --text: #2d3748;
+  --text-secondary: #5a6577;
+  --text-muted: #8a95a5;
   --success: #10b981;
-  --success-bg: #ecfdf5;
+  --success-bg: #d1fae5;
   --warning: #f59e0b;
-  --warning-bg: #fffbeb;
+  --warning-bg: #fef3c7;
   --error: #ef4444;
-  --error-bg: #fef2f2;
-  --none-color: #94a3b8;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-lg: 16px;
-  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --error-bg: #fee2e2;
+  --none-color: #8a95a5;
+  --shadow-light: #ffffff;
+  --shadow-dark: #a3b1c6;
+  --neo-outset: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+  --neo-outset-sm: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);
+  --neo-inset: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+  --neo-inset-sm: inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light);
+  --radius: 16px;
+  --radius-sm: 12px;
+  --radius-lg: 24px;
+  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html {
@@ -52,105 +51,90 @@ body {
   line-height: 1.6;
 }
 
-/* ===== Background Pattern ===== */
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 100vh;
-  background: linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);
-  z-index: 0;
-}
-
 /* ===== Container ===== */
 .container {
-  position: relative;
-  z-index: 1;
-  max-width: 680px;
+  max-width: 640px;
   margin: 0 auto;
-  padding: 0 20px;
-  margin-bottom: 50px;
+  padding: 0 24px;
+  padding-bottom: 60px;
 }
 
 /* ===== Header ===== */
 .header {
   text-align: center;
-  padding: 48px 0 32px;
-  color: white;
+  padding: 52px 0 36px;
 }
 
 .logo {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 14px;
+  margin-bottom: 10px;
 }
 
 .logo-icon {
-  width: 36px;
-  height: 36px;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  width: 34px;
+  height: 34px;
+  color: var(--primary);
 }
 
 .header h1 {
-  font-size: 1.75rem;
+  font-size: 1.6rem;
   font-weight: 800;
   letter-spacing: -0.03em;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  color: var(--text);
 }
 
 .subtitle {
-  font-size: 0.95rem;
-  opacity: 0.9;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
   font-weight: 400;
   margin-top: 4px;
 }
 
 /* ===== Search Section ===== */
 .search-section {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .search-card {
   background: var(--surface);
   border-radius: var(--radius-lg);
-  padding: 28px;
-  box-shadow: var(--shadow-xl);
-  border: 1px solid var(--border-light);
-  margin-top: 50px;
+  padding: 32px;
+  box-shadow: var(--neo-outset);
+  margin-top: 12px;
 }
 
 .input-label {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 10px;
+  letter-spacing: 0.06em;
+  margin-bottom: 12px;
 }
 
 .input-group {
   display: flex;
-  gap: 10px;
+  gap: 14px;
 }
 
 .input-group input {
   flex: 1;
-  padding: 14px 18px;
-  font-size: 1rem;
+  padding: 16px 20px;
+  font-size: 0.95rem;
   font-family: 'Inter', sans-serif;
   font-weight: 500;
-  border: 2px solid var(--border);
+  border: none;
   border-radius: var(--radius-sm);
   outline: none;
   transition: var(--transition);
   background: var(--surface);
   color: var(--text);
   letter-spacing: 0.02em;
+  box-shadow: var(--neo-inset);
 }
 
 .input-group input::placeholder {
@@ -159,16 +143,15 @@ body::before {
 }
 
 .input-group input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px var(--primary-glow);
+  box-shadow: var(--neo-inset), 0 0 0 3px var(--primary-glow);
 }
 
 .input-group button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 24px;
-  font-size: 0.9rem;
+  padding: 16px 28px;
+  font-size: 0.85rem;
   font-family: 'Inter', sans-serif;
   font-weight: 600;
   color: white;
@@ -178,47 +161,46 @@ body::before {
   cursor: pointer;
   transition: var(--transition);
   white-space: nowrap;
+  box-shadow: 4px 4px 10px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
 }
 
 .input-group button:hover {
   background: var(--primary-dark);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 2px 2px 6px var(--shadow-dark), -1px -1px 4px var(--shadow-light);
 }
 
 .input-group button:active {
-  transform: translateY(0);
+  box-shadow: var(--neo-inset-sm);
 }
 
 .input-hint {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 /* ===== Message Area ===== */
 .message-area {
   margin-bottom: 24px;
-  padding: 16px 20px;
+  padding: 18px 22px;
   border-radius: var(--radius-sm);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   animation: slideDown 0.3s ease;
+  box-shadow: var(--neo-outset-sm);
 }
 
 .message-area.error {
   background: var(--error-bg);
   color: var(--error);
-  border: 1px solid #fecaca;
 }
 
 .message-area.warning {
   background: var(--warning-bg);
   color: #b45309;
-  border: 1px solid #fde68a;
 }
 
 .message-area svg {
@@ -238,34 +220,34 @@ body::before {
 .student-info {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
   background: var(--surface);
-  padding: 24px;
+  padding: 26px;
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border-light);
-  margin-bottom: 16px;
+  box-shadow: var(--neo-outset);
+  margin-bottom: 20px;
 }
 
 .student-avatar {
-  width: 56px;
-  height: 56px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
-  background: var(--primary-light);
+  background: var(--surface);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: var(--neo-outset-sm);
 }
 
 .student-avatar svg {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   color: var(--primary);
 }
 
 .student-name {
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--text);
   letter-spacing: -0.02em;
@@ -287,8 +269,7 @@ body::before {
 .grades-container {
   background: var(--surface);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border-light);
+  box-shadow: var(--neo-outset);
   overflow: hidden;
 }
 
@@ -296,52 +277,48 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border);
+  padding: 22px 26px;
 }
 
 .grades-header h3 {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--text);
 }
 
 .term-badge {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  color: var(--primary);
-  background: var(--primary-light);
-  padding: 4px 12px;
+  color: white;
+  background: var(--primary);
+  padding: 5px 14px;
   border-radius: 20px;
+  box-shadow: 2px 2px 5px var(--shadow-dark), -1px -1px 3px var(--shadow-light);
 }
 
 .grades-body {
-  padding: 16px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 /* ===== Subject Card ===== */
 .subject-card {
-  border: 1px solid var(--border);
+  background: var(--surface);
   border-radius: var(--radius);
   overflow: hidden;
+  box-shadow: var(--neo-outset-sm);
   transition: var(--transition);
 }
 
-.subject-card:hover {
-  box-shadow: var(--shadow-md);
-}
-
 .subject-card-header {
-  padding: 14px 20px;
-  background: var(--surface-hover);
-  border-bottom: 1px solid var(--border);
+  padding: 16px 22px;
+  background: var(--surface);
 }
 
 .subject-name {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--text);
 }
@@ -350,42 +327,46 @@ body::before {
 .terms-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+  padding: 4px 10px 14px;
 }
 
 .term-column {
-  padding: 20px;
+  padding: 18px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   position: relative;
 }
 
 .term-column:not(:last-child)::after {
   content: '';
   position: absolute;
-  top: 12px;
-  bottom: 12px;
+  top: 14px;
+  bottom: 14px;
   right: 0;
   width: 1px;
-  background: var(--border);
+  background: var(--shadow-dark);
+  opacity: 0.25;
 }
 
 .term-label {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--primary);
-  background: var(--primary-light);
-  padding: 3px 10px;
-  border-radius: 10px;
+  letter-spacing: 0.1em;
+  color: white;
+  background: var(--primary);
+  padding: 4px 12px;
+  border-radius: 12px;
+  box-shadow: 2px 2px 5px var(--shadow-dark), -1px -1px 3px var(--shadow-light);
 }
 
 .grade-number {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  color: var(--text);
 }
 
 .grade-number.pass {
@@ -411,19 +392,15 @@ body::before {
 .footer {
   text-align: center;
   padding: 40px 0 10px;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
 }
 
 /* ===== Animations ===== */
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -434,7 +411,7 @@ body::before {
 @keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-10px);
   }
   to {
     opacity: 1;
@@ -474,19 +451,20 @@ body::before {
   }
 
   .header h1 {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
   }
 
   .subtitle {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
   }
 
   .search-card {
-    padding: 20px;
+    padding: 24px;
   }
 
   .input-group {
     flex-direction: column;
+    gap: 12px;
   }
 
   .input-group button {
@@ -494,25 +472,26 @@ body::before {
   }
 
   .student-info {
-    padding: 18px;
+    padding: 20px;
     flex-direction: column;
     text-align: center;
   }
 
   .grades-header {
-    padding: 16px 18px;
+    padding: 18px 20px;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
     align-items: flex-start;
   }
 
   .grades-body {
-    padding: 12px;
-    gap: 12px;
+    padding: 14px;
+    gap: 14px;
   }
 
   .terms-grid {
     grid-template-columns: 1fr;
+    padding: 4px 8px 10px;
   }
 
   .term-column {
@@ -524,13 +503,13 @@ body::before {
   .term-column:not(:last-child)::after {
     top: auto;
     bottom: 0;
-    left: 12px;
-    right: 12px;
+    left: 16px;
+    right: 16px;
     width: auto;
     height: 1px;
   }
 
   .grade-number {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
   }
 }
