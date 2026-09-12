@@ -22,6 +22,12 @@ const loggingInModal = document.getElementById("loggingInModal");
 const loggingOutModal = document.getElementById("loggingOutModal");
 
 const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+const MIN_MODAL_DISPLAY_MS = 2000; // 2 seconds minimum display time
+
+// ===== Helpers =====
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 // ===== Auth Helpers =====
 function findAccountByPassword(password) {
@@ -104,15 +110,24 @@ async function checkAuth() {
 
   if (auth === "true" && account) {
     loggingInModal.classList.remove("hidden");
+    const startTime = Date.now();
     const active = await isSessionActive(account);
     if (active) {
       // Session still active — auto-login
       await recordActivity(account);
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_MODAL_DISPLAY_MS) {
+        await wait(MIN_MODAL_DISPLAY_MS - elapsed);
+      }
       loggingInModal.classList.add("hidden");
       showDashboard(account);
       return;
     } else {
       // Session expired — clear and show login
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_MODAL_DISPLAY_MS) {
+        await wait(MIN_MODAL_DISPLAY_MS - elapsed);
+      }
       loggingInModal.classList.add("hidden");
       clearSession();
     }
@@ -138,10 +153,15 @@ async function attemptLogin() {
 
   // Show loading modal
   loggingInModal.classList.remove("hidden");
+  const startTime = Date.now();
 
   // Check if account already has an active session
   const active = await isSessionActive(account.name);
   if (active) {
+    const elapsed = Date.now() - startTime;
+    if (elapsed < MIN_MODAL_DISPLAY_MS) {
+      await wait(MIN_MODAL_DISPLAY_MS - elapsed);
+    }
     loggingInModal.classList.add("hidden");
     showError("This account is already active. Log out from the other session first.");
     passwordInput.value = "";
@@ -156,17 +176,26 @@ async function attemptLogin() {
   sessionStorage.setItem("admin_auth", "true");
   sessionStorage.setItem("admin_account", account.name);
 
+  const elapsed = Date.now() - startTime;
+  if (elapsed < MIN_MODAL_DISPLAY_MS) {
+    await wait(MIN_MODAL_DISPLAY_MS - elapsed);
+  }
   loggingInModal.classList.add("hidden");
   showDashboard(account.name);
 }
 
 async function logout() {
   loggingOutModal.classList.remove("hidden");
+  const startTime = Date.now();
   const account = sessionStorage.getItem("admin_account");
   if (account) {
     await deleteSession(account);
   }
   clearSession();
+  const elapsed = Date.now() - startTime;
+  if (elapsed < MIN_MODAL_DISPLAY_MS) {
+    await wait(MIN_MODAL_DISPLAY_MS - elapsed);
+  }
   loggingOutModal.classList.add("hidden");
   passwordModal.classList.remove("hidden");
   adminDashboard.classList.add("hidden");
