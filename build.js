@@ -14,5 +14,5 @@ const SUPABASE_ANON_KEY = "${key}";
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 `;
 
-fs.writeFileSync("config.js", content);
+fs.writeFileSync("public/config.js", content);
 console.log("config.js generated successfully.");
