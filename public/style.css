@@ -822,6 +822,273 @@ body {
   font-weight: 400;
 }
 
+/* ===== Admin Container ===== */
+.admin-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 28px;
+  padding-bottom: 60px;
+}
+
+/* ===== Admin Header ===== */
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32px 0 24px;
+  gap: 16px;
+}
+
+.admin-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-header-left .logo-icon {
+  width: 34px;
+  height: 34px;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.admin-header-left h1 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.admin-header-left .subtitle {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+
+.upload-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  font-size: 0.85rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  color: white;
+  background: var(--primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  box-shadow: 4px 4px 10px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
+}
+
+.upload-trigger-btn:hover {
+  background: var(--primary-dark);
+}
+
+.upload-trigger-btn:active {
+  box-shadow: var(--neo-inset-sm);
+}
+
+/* ===== Admin Toolbar ===== */
+.admin-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  background: var(--surface);
+  padding: 20px 24px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--neo-outset);
+}
+
+.toolbar-left {
+  flex: 1;
+  max-width: 320px;
+}
+
+.toolbar-left .input-label {
+  margin-bottom: 8px;
+}
+
+.toolbar-left .neo-select {
+  width: 100%;
+}
+
+.toolbar-right {
+  flex-shrink: 0;
+}
+
+.grades-count {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* ===== Grades Table Wrapper ===== */
+.grades-table-wrapper {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--neo-outset);
+  overflow: hidden;
+}
+
+.grades-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+  gap: 12px;
+}
+
+.grades-empty-state svg {
+  opacity: 0.4;
+}
+
+.grades-empty-state p {
+  font-size: 0.9rem;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--shadow-dark);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ===== Admin Table ===== */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.admin-table thead {
+  background: var(--surface-hover);
+}
+
+.admin-table th {
+  padding: 14px 18px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--shadow-dark);
+  border-bottom-color: rgba(163, 177, 198, 0.25);
+}
+
+.admin-table th.col-grade {
+  text-align: center;
+  width: 100px;
+}
+
+.admin-table td {
+  padding: 12px 18px;
+  color: var(--text);
+  border-bottom: 1px solid rgba(163, 177, 198, 0.12);
+  white-space: nowrap;
+}
+
+.admin-table tbody tr {
+  transition: var(--transition);
+}
+
+.admin-table tbody tr:hover {
+  background: var(--surface-hover);
+}
+
+.admin-table tbody tr.student-first-row td {
+  border-top: 2px solid var(--shadow-dark);
+  border-top-color: rgba(163, 177, 198, 0.35);
+  padding-top: 16px;
+  font-weight: 600;
+}
+
+.admin-table tbody tr:not(.student-first-row) td:first-child,
+.admin-table tbody tr:not(.student-first-row) td:nth-child(2) {
+  color: var(--text-muted);
+}
+
+.admin-table .grade-cell {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.admin-table .grade-cell.pass {
+  color: var(--success);
+}
+
+.admin-table .grade-cell.warn {
+  color: var(--warning);
+}
+
+.admin-table .grade-cell.fail {
+  color: var(--error);
+}
+
+.admin-table .grade-cell.none {
+  color: var(--none-color);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* ===== Upload Modal ===== */
+.upload-modal-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--neo-outset);
+  padding: 32px;
+  max-width: 520px;
+  width: 100%;
+  animation: slideUp 0.4s ease;
+}
+
+.upload-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.upload-modal-header h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.modal-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: var(--neo-outset-sm);
+}
+
+.modal-close-btn:hover {
+  color: var(--error);
+}
+
+.modal-close-btn:active {
+  box-shadow: var(--neo-inset-sm);
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 600px) {
   .header {
@@ -920,5 +1187,35 @@ body {
   .admin-table td {
     padding: 8px 10px;
     font-size: 0.75rem;
+  }
+
+  .admin-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .upload-trigger-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .admin-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .toolbar-left {
+    max-width: 100%;
+  }
+
+  .toolbar-right {
+    text-align: center;
+  }
+
+  .upload-modal-card {
+    margin: 16px;
+    padding: 24px;
   }
 }

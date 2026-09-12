@@ -42,97 +42,107 @@
     </div>
   </div>
 
+  <!-- Upload Modal -->
+  <div id="uploadModal" class="modal-overlay hidden">
+    <div class="upload-modal-card">
+      <div class="upload-modal-header">
+        <h2>Upload CSV</h2>
+        <button class="modal-close-btn" onclick="closeUploadModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <p class="section-desc">Upload a CSV file with columns: P/M/F, SUBJECT, SECTION, STUDENT NO., STUDENT NAME, PRELIM</p>
+      <div class="upload-area" id="uploadArea">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="36" height="36">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <p class="upload-text">Drag & drop your CSV file here, or</p>
+        <label class="upload-btn" for="csvFileInput">Browse Files</label>
+        <input type="file" id="csvFileInput" accept=".csv" class="hidden">
+        <p id="fileName" class="file-name hidden"></p>
+      </div>
+      <button id="uploadBtn" class="upload-submit hidden" onclick="uploadCSV()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        Upload to Database
+      </button>
+      <div id="uploadStatus" class="upload-status hidden"></div>
+    </div>
+  </div>
+
   <!-- Admin Dashboard -->
-  <div id="adminDashboard" class="container hidden">
+  <div id="adminDashboard" class="admin-container hidden">
 
     <!-- Header -->
-    <header class="header">
-      <div class="logo">
+    <header class="admin-header">
+      <div class="admin-header-left">
         <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
         </svg>
-        <h1>Admin Dashboard</h1>
+        <div>
+          <h1>Admin Dashboard</h1>
+          <p class="subtitle">Manage student grades</p>
+        </div>
       </div>
-      <p class="subtitle">Manage student grades and uploads</p>
+      <button class="upload-trigger-btn" onclick="openUploadModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        Upload CSV
+      </button>
     </header>
 
-    <!-- Upload Section -->
-    <section class="admin-section">
-      <div class="section-card">
-        <div class="section-header">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          <h3>Upload CSV</h3>
-        </div>
-        <p class="section-desc">Upload a CSV file with columns: P/M/F, SUBJECT, SECTION, STUDENT NO., STUDENT NAME, PRELIM</p>
-        <div class="upload-area" id="uploadArea">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="36" height="36">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          <p class="upload-text">Drag & drop your CSV file here, or</p>
-          <label class="upload-btn" for="csvFileInput">Browse Files</label>
-          <input type="file" id="csvFileInput" accept=".csv" class="hidden">
-          <p id="fileName" class="file-name hidden"></p>
-        </div>
-        <button id="uploadBtn" class="upload-submit hidden" onclick="uploadCSV()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          Upload to Database
-        </button>
-        <div id="uploadStatus" class="upload-status hidden"></div>
+    <!-- Toolbar -->
+    <div class="admin-toolbar">
+      <div class="toolbar-left">
+        <label class="input-label" for="sectionFilter">Section</label>
+        <select id="sectionFilter" class="neo-select">
+          <option value="">Select a section</option>
+        </select>
       </div>
-    </section>
+      <div class="toolbar-right">
+        <span id="gradesCount" class="grades-count"></span>
+      </div>
+    </div>
 
-    <!-- View Grades Section -->
-    <section class="admin-section">
-      <div class="section-card">
-        <div class="section-header">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-          </svg>
-          <h3>View Grades</h3>
-        </div>
-        <div class="filter-group">
-          <label class="input-label" for="sectionFilter">Select Section</label>
-          <div class="filter-row">
-            <select id="sectionFilter" class="neo-select">
-              <option value="">Loading sections...</option>
-            </select>
-            <button id="loadGradesBtn" class="filter-btn" onclick="loadGrades()">
-              Load Grades
-            </button>
-          </div>
-        </div>
-        <div id="gradesStatus" class="upload-status hidden"></div>
-        <div id="gradesTableWrapper" class="grades-table-wrapper hidden">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>Student No.</th>
-                <th>Student Name</th>
-                <th>Subject</th>
-                <th>Prelim</th>
-                <th>Midterm</th>
-                <th>Final</th>
-              </tr>
-            </thead>
-            <tbody id="gradesTableBody">
-            </tbody>
-          </table>
-        </div>
+    <!-- Grades Table -->
+    <div id="gradesTableWrapper" class="grades-table-wrapper">
+      <div id="gradesEmptyState" class="grades-empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="40" height="40">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        <p>Select a section to view grades</p>
       </div>
-    </section>
+      <div id="gradesLoading" class="grades-empty-state hidden">
+        <div class="spinner"></div>
+        <p>Loading grades...</p>
+      </div>
+      <table id="gradesTable" class="admin-table hidden">
+        <thead>
+          <tr>
+            <th>Student No.</th>
+            <th>Student Name</th>
+            <th>Subject</th>
+            <th class="col-grade">Prelim</th>
+            <th class="col-grade">Midterm</th>
+            <th class="col-grade">Final</th>
+          </tr>
+        </thead>
+        <tbody id="gradesTableBody">
+        </tbody>
+      </table>
+    </div>
 
   </div>
 

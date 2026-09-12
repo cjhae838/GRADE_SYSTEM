@@ -4,16 +4,19 @@ const passwordInput = document.getElementById("passwordInput");
 const loginBtn = document.getElementById("loginBtn");
 const passwordError = document.getElementById("passwordError");
 const adminDashboard = document.getElementById("adminDashboard");
+const uploadModal = document.getElementById("uploadModal");
 const csvFileInput = document.getElementById("csvFileInput");
 const uploadArea = document.getElementById("uploadArea");
 const fileName = document.getElementById("fileName");
 const uploadBtn = document.getElementById("uploadBtn");
 const uploadStatus = document.getElementById("uploadStatus");
 const sectionFilter = document.getElementById("sectionFilter");
-const loadGradesBtn = document.getElementById("loadGradesBtn");
-const gradesStatus = document.getElementById("gradesStatus");
+const gradesCount = document.getElementById("gradesCount");
 const gradesTableWrapper = document.getElementById("gradesTableWrapper");
+const gradesTable = document.getElementById("gradesTable");
 const gradesTableBody = document.getElementById("gradesTableBody");
+const gradesEmptyState = document.getElementById("gradesEmptyState");
+const gradesLoading = document.getElementById("gradesLoading");
 
 // ===== Auth =====
 function checkAuth() {
@@ -40,9 +43,39 @@ function showDashboard() {
   loadSections();
 }
 
-// Enter key on password input
 passwordInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") attemptLogin();
+});
+
+// ===== Upload Modal =====
+function openUploadModal() {
+  uploadModal.classList.remove("hidden");
+  resetUploadForm();
+}
+
+function closeUploadModal() {
+  uploadModal.classList.add("hidden");
+  resetUploadForm();
+}
+
+function resetUploadForm() {
+  csvFileInput.value = "";
+  fileName.classList.add("hidden");
+  uploadBtn.classList.add("hidden");
+  uploadStatus.classList.add("hidden");
+  uploadArea.classList.remove("dragover");
+}
+
+// Close modal on backdrop click
+uploadModal.addEventListener("click", (e) => {
+  if (e.target === uploadModal) closeUploadModal();
+});
+
+// Close modal on Escape key
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !uploadModal.classList.contains("hidden")) {
+    closeUploadModal();
+  }
 });
 
 // ===== CSV File Handling =====
@@ -56,7 +89,6 @@ csvFileInput.addEventListener("change", (e) => {
   }
 });
 
-// Drag and drop
 uploadArea.addEventListener("dragover", (e) => {
   e.preventDefault();
   uploadArea.classList.add("dragover");
@@ -113,7 +145,6 @@ async function uploadCSV() {
       return;
     }
 
-    // Validate columns - match case-insensitively, handle whitespace
     const requiredCols = ["P/M/F", "SUBJECT", "SECTION", "STUDENT NO.", "STUDENT NAME", "PRELIM"];
     const normalizedHeaders = headers.map(normalizeHeader);
     const normalizedRequired = requiredCols.map(normalizeHeader);
@@ -126,13 +157,11 @@ async function uploadCSV() {
       return;
     }
 
-    // Build index map: normalized header → original index
     const headerIndex = {};
     headers.forEach((h, i) => {
       headerIndex[normalizeHeader(h)] = i;
     });
 
-    // Map CSV rows to database format and encrypt sensitive fields
     const gradeRows = [];
     for (const row of rows) {
       const period = row[headerIndex["P/M/F"]]?.trim().toUpperCase();
@@ -153,7 +182,6 @@ async function uploadCSV() {
       const grade = parseFloat(row[headerIndex["PRELIM"]]);
       if (isNaN(grade)) continue;
 
-      // Encrypt sensitive fields
       const encryptedStudentNo = await CryptoModule.encrypt(studentNo);
       const encryptedStudentName = await CryptoModule.encrypt(studentName);
       const encryptedSection = await CryptoModule.encrypt(section);
@@ -175,7 +203,6 @@ async function uploadCSV() {
       return;
     }
 
-    // Insert in batches of 50
     let inserted = 0;
     for (let i = 0; i < gradeRows.length; i += 50) {
       const batch = gradeRows.slice(i, i + 50);
@@ -202,7 +229,12 @@ async function uploadCSV() {
     }
 
     showUploadStatus(`Successfully uploaded ${inserted} rows.`, "success");
-    loadSections(); // Refresh sections
+    loadSections();
+
+    // Auto-load if a section is selected
+    if (sectionFilter.value) {
+      loadGrades();
+    }
   } catch (err) {
     console.error("Upload error:", err);
     showUploadStatus("An error occurred during upload.", "error");
@@ -228,7 +260,6 @@ function parseCSV(text) {
   const lines = text.split("\n").filter((l) => l.trim());
   if (lines.length < 2) return { headers: [], rows: [] };
 
-  // Auto-detect delimiter from first line
   const firstLine = lines[0];
   const tabCount = (firstLine.match(/\t/g) || []).length;
   const commaCount = (firstLine.match(/,/g) || []).length;
@@ -263,16 +294,16 @@ function parseCSV(text) {
   return { headers, rows };
 }
 
-// Normalize header for matching (uppercase, collapse spaces)
 function normalizeHeader(h) {
   return h.toUpperCase().replace(/\s+/g, " ").trim();
 }
+
 function showUploadStatus(msg, type) {
   uploadStatus.textContent = msg;
   uploadStatus.className = `upload-status ${type}`;
 }
 
-// ===== Grade Viewer =====
+// ===== Sections =====
 async function loadSections() {
   try {
     const response = await fetch(
@@ -291,13 +322,12 @@ async function loadSections() {
     }
 
     const data = await response.json();
-
-    // Decrypt and deduplicate sections
     const decryptedSections = await Promise.all(
       data.map((row) => CryptoModule.decrypt(row.section))
     );
     const unique = [...new Set(decryptedSections)].sort();
 
+    const currentVal = sectionFilter.value;
     sectionFilter.innerHTML = '<option value="">Select a section</option>';
     unique.forEach((sec) => {
       const opt = document.createElement("option");
@@ -305,28 +335,40 @@ async function loadSections() {
       opt.textContent = sec;
       sectionFilter.appendChild(opt);
     });
+
+    // Restore previous selection if still valid
+    if (currentVal && unique.includes(currentVal)) {
+      sectionFilter.value = currentVal;
+    }
   } catch (err) {
     console.error("Error loading sections:", err);
     sectionFilter.innerHTML = '<option value="">Error loading sections</option>';
   }
 }
 
+// Auto-load grades when section changes
+sectionFilter.addEventListener("change", () => {
+  if (sectionFilter.value) {
+    loadGrades();
+  } else {
+    showEmptyState();
+  }
+});
+
+// ===== Grade Viewer =====
 async function loadGrades() {
   const section = sectionFilter.value;
   if (!section) {
-    showGradesStatus("Please select a section.", "error");
+    showEmptyState();
     return;
   }
 
-  loadGradesBtn.disabled = true;
-  loadGradesBtn.textContent = "Loading...";
-  showGradesStatus("", "");
-  gradesTableWrapper.classList.add("hidden");
+  showLoading();
+  gradesCount.textContent = "";
 
   try {
-    // Fetch all grades (we filter client-side after decrypting)
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/grades?select=period,subject_code,section,student_no,student_name,grade&order=student_no`,
+      `${SUPABASE_URL}/rest/v1/grades?select=period,subject_code,section,student_no,student_name,grade&order=student_no,subject_code`,
       {
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -337,13 +379,13 @@ async function loadGrades() {
 
     if (!response.ok) {
       console.error("Failed to load grades:", await response.text());
-      showGradesStatus("Failed to load grades.", "error");
+      showEmptyState();
       return;
     }
 
     const data = await response.json();
 
-    // Decrypt all rows and filter by section
+    // Decrypt and filter by section
     const decryptedRows = [];
     for (const row of data) {
       const decryptedSection = await CryptoModule.decrypt(row.section);
@@ -359,7 +401,17 @@ async function loadGrades() {
     }
 
     if (decryptedRows.length === 0) {
-      showGradesStatus("No grades found for this section.", "error");
+      gradesEmptyState.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="40" height="40">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="8" y1="12" x2="16" y2="12"/>
+        </svg>
+        <p>No grades found for this section</p>
+      `;
+      gradesEmptyState.classList.remove("hidden");
+      gradesLoading.classList.add("hidden");
+      gradesTable.classList.add("hidden");
+      gradesCount.textContent = "";
       return;
     }
 
@@ -382,13 +434,21 @@ async function loadGrades() {
       else if (row.period === "F") gradesMap[key].final = row.grade;
     });
 
-    // Render table
+    // Render grouped table
+    const entries = Object.values(gradesMap);
     gradesTableBody.innerHTML = "";
-    Object.values(gradesMap).forEach((g) => {
+    let prevStudentNo = "";
+
+    entries.forEach((g) => {
+      const isNewStudent = g.student_no !== prevStudentNo;
+      prevStudentNo = g.student_no;
+
       const tr = document.createElement("tr");
+      if (isNewStudent) tr.classList.add("student-first-row");
+
       tr.innerHTML = `
-        <td>${escapeHtml(g.student_no)}</td>
-        <td>${escapeHtml(g.student_name)}</td>
+        <td>${isNewStudent ? escapeHtml(g.student_no) : ""}</td>
+        <td>${isNewStudent ? escapeHtml(g.student_name) : ""}</td>
         <td>${escapeHtml(g.subject_code)}</td>
         <td class="grade-cell ${getGradeClass(g.prelim)}">${g.prelim ?? "N/A"}</td>
         <td class="grade-cell ${getGradeClass(g.midterm)}">${g.midterm ?? "N/A"}</td>
@@ -397,24 +457,37 @@ async function loadGrades() {
       gradesTableBody.appendChild(tr);
     });
 
-    showGradesStatus(`${Object.keys(gradesMap).length} records found.`, "success");
-    gradesTableWrapper.classList.remove("hidden");
+    gradesEmptyState.classList.add("hidden");
+    gradesLoading.classList.add("hidden");
+    gradesTable.classList.remove("hidden");
+
+    // Count unique students
+    const uniqueStudents = new Set(entries.map((g) => g.student_no)).size;
+    gradesCount.textContent = `${entries.length} records \u00B7 ${uniqueStudents} students`;
   } catch (err) {
     console.error("Error loading grades:", err);
-    showGradesStatus("An error occurred while loading grades.", "error");
-  } finally {
-    loadGradesBtn.disabled = false;
-    loadGradesBtn.textContent = "Load Grades";
+    showEmptyState();
   }
 }
 
-function showGradesStatus(msg, type) {
-  if (!msg) {
-    gradesStatus.classList.add("hidden");
-    return;
-  }
-  gradesStatus.textContent = msg;
-  gradesStatus.className = `upload-status ${type}`;
+function showEmptyState() {
+  gradesEmptyState.innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="40" height="40">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+    </svg>
+    <p>Select a section to view grades</p>
+  `;
+  gradesEmptyState.classList.remove("hidden");
+  gradesLoading.classList.add("hidden");
+  gradesTable.classList.add("hidden");
+  gradesCount.textContent = "";
+}
+
+function showLoading() {
+  gradesEmptyState.classList.add("hidden");
+  gradesLoading.classList.remove("hidden");
+  gradesTable.classList.add("hidden");
 }
 
 function getGradeClass(grade) {
