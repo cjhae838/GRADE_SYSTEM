@@ -104,7 +104,7 @@ async function uploadCSV() {
 
   try {
     const text = await file.text();
-    const rows = parseCSV(text);
+    const { headers, rows } = parseCSV(text);
 
     if (rows.length === 0) {
       showUploadStatus("CSV file is empty or has no valid rows.", "error");
@@ -113,38 +113,54 @@ async function uploadCSV() {
       return;
     }
 
-    // Validate columns
+    // Validate columns - match case-insensitively, handle whitespace
     const requiredCols = ["P/M/F", "SUBJECT", "SECTION", "STUDENT NO.", "STUDENT NAME", "PRELIM"];
-    const headers = rows[0].map((h) => h.trim().toUpperCase());
-    const missingCols = requiredCols.filter((col) => !headers.includes(col));
+    const normalizedHeaders = headers.map(normalizeHeader);
+    const normalizedRequired = requiredCols.map(normalizeHeader);
+    const missingCols = normalizedRequired.filter((col) => !normalizedHeaders.includes(col));
 
     if (missingCols.length > 0) {
-      showUploadStatus(`Missing columns: ${missingCols.join(", ")}`, "error");
+      showUploadStatus(`Missing columns: ${missingCols.join(", ")}. Found: ${headers.join(", ")}`, "error");
       uploadBtn.disabled = false;
       resetUploadBtn();
       return;
     }
 
+    // Build index map: normalized header → original index
+    const headerIndex = {};
+    headers.forEach((h, i) => {
+      headerIndex[normalizeHeader(h)] = i;
+    });
+
     // Map CSV rows to database format and encrypt sensitive fields
     const gradeRows = [];
     for (const row of rows) {
-      const rowData = {};
-      headers.forEach((h, i) => (rowData[h] = row[i]?.trim()));
-
-      const period = rowData["P/M/F"]?.toUpperCase();
+      const period = row[headerIndex["P/M/F"]]?.trim().toUpperCase();
       if (!["P", "M", "F"].includes(period)) continue;
 
-      const grade = parseFloat(rowData["PRELIM"]);
+      const subjectCode = row[headerIndex["SUBJECT"]]?.trim();
+      if (!subjectCode) continue;
+
+      const section = row[headerIndex["SECTION"]]?.trim();
+      if (!section) continue;
+
+      const studentNo = row[headerIndex["STUDENT NO."]]?.trim();
+      if (!studentNo) continue;
+
+      const studentName = row[headerIndex["STUDENT NAME"]]?.trim();
+      if (!studentName) continue;
+
+      const grade = parseFloat(row[headerIndex["PRELIM"]]);
       if (isNaN(grade)) continue;
 
       // Encrypt sensitive fields
-      const encryptedStudentNo = await CryptoModule.encrypt(rowData["STUDENT NO."]);
-      const encryptedStudentName = await CryptoModule.encrypt(rowData["STUDENT NAME"]);
-      const encryptedSection = await CryptoModule.encrypt(rowData["SECTION"]);
+      const encryptedStudentNo = await CryptoModule.encrypt(studentNo);
+      const encryptedStudentName = await CryptoModule.encrypt(studentName);
+      const encryptedSection = await CryptoModule.encrypt(section);
 
       gradeRows.push({
         period,
-        subject_code: rowData["SUBJECT"],
+        subject_code: subjectCode,
         section: encryptedSection,
         student_no: encryptedStudentNo,
         student_name: encryptedStudentName,
@@ -207,22 +223,26 @@ function resetUploadBtn() {
   `;
 }
 
-// Simple CSV parser (handles quoted values)
+// CSV parser - auto-detects delimiter (comma or tab), handles quoted values
 function parseCSV(text) {
   const lines = text.split("\n").filter((l) => l.trim());
-  if (lines.length < 2) return [];
+  if (lines.length < 2) return { headers: [], rows: [] };
 
-  const rows = [];
-  for (let i = 1; i < lines.length; i++) {
+  // Auto-detect delimiter from first line
+  const firstLine = lines[0];
+  const tabCount = (firstLine.match(/\t/g) || []).length;
+  const commaCount = (firstLine.match(/,/g) || []).length;
+  const delimiter = tabCount > commaCount ? "\t" : ",";
+
+  function splitLine(line) {
     const row = [];
     let current = "";
     let inQuotes = false;
-
-    for (let j = 0; j < lines[i].length; j++) {
-      const ch = lines[i][j];
+    for (let j = 0; j < line.length; j++) {
+      const ch = line[j];
       if (ch === '"') {
         inQuotes = !inQuotes;
-      } else if (ch === "," && !inQuotes) {
+      } else if (ch === delimiter && !inQuotes) {
         row.push(current.trim());
         current = "";
       } else {
@@ -230,11 +250,23 @@ function parseCSV(text) {
       }
     }
     row.push(current.trim());
-    rows.push(row);
+    return row;
   }
-  return rows;
+
+  const headerLine = splitLine(lines[0]);
+  const headers = headerLine.map((h) => h.trim());
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    rows.push(splitLine(lines[i]));
+  }
+  return { headers, rows };
 }
 
+// Normalize header for matching (uppercase, collapse spaces)
+function normalizeHeader(h) {
+  return h.toUpperCase().replace(/\s+/g, " ").trim();
+}
 function showUploadStatus(msg, type) {
   uploadStatus.textContent = msg;
   uploadStatus.className = `upload-status ${type}`;
