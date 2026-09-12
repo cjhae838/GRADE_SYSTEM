@@ -1,31 +1,3 @@
-// Mock student data - will be replaced with Supabase later
-const students = {
-  "2601010213": {
-    name: "Juan Dela Cruz",
-    subjects: [
-      { name: "Computer Programming 1", prelim: 87, midterm: 90, final: 92 },
-      { name: "Mathematics 1", prelim: 85, midterm: 88, final: null },
-      { name: "English Communication", prelim: 91, midterm: null, final: null }
-    ]
-  },
-  "2601010214": {
-    name: "Maria Santos",
-    subjects: [
-      { name: "Computer Programming 1", prelim: 92, midterm: 95, final: 94 },
-      { name: "Mathematics 1", prelim: 78, midterm: 82, final: 85 },
-      { name: "English Communication", prelim: 88, midterm: 90, final: 87 },
-      { name: "Physical Education 1", prelim: 95, midterm: 96, final: 98 }
-    ]
-  },
-  "2601010215": {
-    name: "Jose Reyes",
-    subjects: [
-      { name: "Computer Programming 1", prelim: 75, midterm: 78, final: null },
-      { name: "Mathematics 1", prelim: 70, midterm: null, final: null }
-    ]
-  }
-};
-
 // DOM elements
 const studentNumberInput = document.getElementById("studentNumber");
 const checkBtn = document.getElementById("checkBtn");
@@ -43,7 +15,7 @@ studentNumberInput.addEventListener("keydown", (e) => {
 });
 
 // Main function to check grades
-function checkGrades() {
+async function checkGrades() {
   const studentNumber = studentNumberInput.value.trim();
 
   if (!studentNumber) {
@@ -54,10 +26,20 @@ function checkGrades() {
 
   setLoading(true);
 
-  setTimeout(() => {
-    const student = students[studentNumber];
+  try {
+    const { data, error } = await supabase
+      .from("grades")
+      .select("period, subject_code, section, student_name, grade")
+      .eq("student_no", studentNumber);
 
-    if (!student) {
+    if (error) {
+      showMessage("Something went wrong. Please try again later.", "error");
+      hideResults();
+      setLoading(false);
+      return;
+    }
+
+    if (!data || data.length === 0) {
       showMessage(
         `Student number "${studentNumber}" was not found. Please check and try again.`,
         "error"
@@ -67,10 +49,43 @@ function checkGrades() {
       return;
     }
 
+    // Transform flat rows into grouped subjects
+    const student = transformGrades(data);
     hideMessage();
     displayResults(student, studentNumber);
+  } catch (err) {
+    showMessage("Something went wrong. Please try again later.", "error");
+    hideResults();
+  } finally {
     setLoading(false);
-  }, 600);
+  }
+}
+
+// Transform flat rows into grouped subject data
+function transformGrades(rows) {
+  const studentName = rows[0].student_name;
+  const subjectsMap = {};
+
+  rows.forEach((row) => {
+    const key = row.subject_code;
+    if (!subjectsMap[key]) {
+      subjectsMap[key] = {
+        name: row.subject_code,
+        prelim: null,
+        midterm: null,
+        final: null,
+      };
+    }
+
+    if (row.period === "P") subjectsMap[key].prelim = row.grade;
+    else if (row.period === "M") subjectsMap[key].midterm = row.grade;
+    else if (row.period === "F") subjectsMap[key].final = row.grade;
+  });
+
+  return {
+    name: studentName,
+    subjects: Object.values(subjectsMap),
+  };
 }
 
 // Display student results
