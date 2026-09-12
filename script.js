@@ -33,6 +33,7 @@ async function checkGrades() {
       .eq("student_no", studentNumber);
 
     if (error) {
+      console.error("Supabase query error:", error.message, error.details);
       showMessage("Something went wrong. Please try again later.", "error");
       hideResults();
       setLoading(false);
@@ -54,6 +55,7 @@ async function checkGrades() {
     hideMessage();
     displayResults(student, studentNumber);
   } catch (err) {
+    console.error("Fetch error:", err);
     showMessage("Something went wrong. Please try again later.", "error");
     hideResults();
   } finally {

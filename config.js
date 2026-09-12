@@ -2,3 +2,4 @@ const SUPABASE_URL = "https://ruiikjyiqsfrzwqymixs.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1aWlranlpcXNmcnp3cXltaXhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxNzkwNTgsImV4cCI6MjEwNDc1NTA1OH0.bRKFjTofuMAOgcz1Nv5O4Zza_BA-k-fRtOpPH6nOTJk";
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+console.log("Supabase client initialized:", !!supabase);
