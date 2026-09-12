@@ -18,6 +18,8 @@ const gradesTable = document.getElementById("gradesTable");
 const gradesTableBody = document.getElementById("gradesTableBody");
 const gradesEmptyState = document.getElementById("gradesEmptyState");
 const gradesLoading = document.getElementById("gradesLoading");
+const loggingInModal = document.getElementById("loggingInModal");
+const loggingOutModal = document.getElementById("loggingOutModal");
 
 const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -101,14 +103,17 @@ async function checkAuth() {
   const account = sessionStorage.getItem("admin_account");
 
   if (auth === "true" && account) {
+    loggingInModal.classList.remove("hidden");
     const active = await isSessionActive(account);
     if (active) {
       // Session still active — auto-login
       await recordActivity(account);
+      loggingInModal.classList.add("hidden");
       showDashboard(account);
       return;
     } else {
       // Session expired — clear and show login
+      loggingInModal.classList.add("hidden");
       clearSession();
     }
   }
@@ -131,9 +136,13 @@ async function attemptLogin() {
     return;
   }
 
+  // Show loading modal
+  loggingInModal.classList.remove("hidden");
+
   // Check if account already has an active session
   const active = await isSessionActive(account.name);
   if (active) {
+    loggingInModal.classList.add("hidden");
     showError("This account is already active. Log out from the other session first.");
     passwordInput.value = "";
     passwordInput.focus();
@@ -147,15 +156,18 @@ async function attemptLogin() {
   sessionStorage.setItem("admin_auth", "true");
   sessionStorage.setItem("admin_account", account.name);
 
+  loggingInModal.classList.add("hidden");
   showDashboard(account.name);
 }
 
 async function logout() {
+  loggingOutModal.classList.remove("hidden");
   const account = sessionStorage.getItem("admin_account");
   if (account) {
     await deleteSession(account);
   }
   clearSession();
+  loggingOutModal.classList.add("hidden");
   passwordModal.classList.remove("hidden");
   adminDashboard.classList.add("hidden");
   passwordInput.value = "";

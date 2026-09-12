@@ -1,3 +1,14 @@
+// ===== Splash Screen =====
+window.addEventListener("load", () => {
+  const splash = document.getElementById("splashScreen");
+  if (splash) {
+    setTimeout(() => {
+      splash.classList.add("splash-fade-out");
+      setTimeout(() => splash.remove(), 600);
+    }, 2500);
+  }
+});
+
 // DOM elements
 const studentNumberInput = document.getElementById("studentNumber");
 const checkBtn = document.getElementById("checkBtn");
