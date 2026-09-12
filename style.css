@@ -68,7 +68,7 @@ body::before {
 .container {
   position: relative;
   z-index: 1;
-  max-width: 800px;
+  max-width: 680px;
   margin: 0 auto;
   padding: 0 20px;
   margin-bottom: 50px;
@@ -353,11 +353,11 @@ body::before {
 }
 
 .term-column {
-  padding: 16px 20px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   position: relative;
 }
 
@@ -382,59 +382,8 @@ body::before {
   border-radius: 10px;
 }
 
-/* ===== Term Details ===== */
-.term-details {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.8rem;
-}
-
-.detail-label {
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.detail-value {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
-}
-
-.detail-value.none {
-  color: var(--none-color);
-  font-style: italic;
-  font-weight: 400;
-}
-
-/* ===== Term Grade (bottom) ===== */
-.term-grade {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 10px;
-  border-top: 1px dashed var(--border);
-  margin-top: 4px;
-}
-
-.grade-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
-}
-
 .grade-number {
-  font-size: 1.1rem;
+  font-size: 1.4rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -455,7 +404,7 @@ body::before {
   color: var(--none-color);
   font-style: italic;
   font-weight: 400;
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 /* ===== Footer ===== */
@@ -569,7 +518,7 @@ body::before {
   .term-column {
     flex-direction: row;
     justify-content: space-between;
-    padding: 12px 16px;
+    padding: 14px 16px;
   }
 
   .term-column:not(:last-child)::after {
@@ -581,26 +530,7 @@ body::before {
     height: 1px;
   }
 
-  .term-label {
-    min-width: 60px;
-    text-align: center;
-  }
-
-  .term-details {
-    flex: 1;
-    margin: 0 12px;
-  }
-
-  .term-grade {
-    border-top: none;
-    margin-top: 0;
-    padding-top: 0;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 2px;
-  }
-
   .grade-number {
-    font-size: 1rem;
+    font-size: 1.1rem;
   }
 }

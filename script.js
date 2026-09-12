@@ -3,70 +3,25 @@ const students = {
   "2601010213": {
     name: "Juan Dela Cruz",
     subjects: [
-      {
-        name: "Computer Programming 1",
-        prelim: { exam: 82, lab: 88, qar: 85, grade: 87 },
-        midterm: { exam: 88, lab: 92, qar: 90, grade: 90 },
-        final: { exam: 90, lab: 95, qar: 91, grade: 92 }
-      },
-      {
-        name: "Mathematics 1",
-        prelim: { exam: 80, lab: null, qar: 85, grade: 85 },
-        midterm: { exam: 85, lab: null, qar: 88, grade: 88 },
-        final: { exam: null, lab: null, qar: null, grade: null }
-      },
-      {
-        name: "English Communication",
-        prelim: { exam: 88, lab: null, qar: 91, grade: 91 },
-        midterm: { exam: null, lab: null, qar: null, grade: null },
-        final: { exam: null, lab: null, qar: null, grade: null }
-      }
+      { name: "Computer Programming 1", prelim: 87, midterm: 90, final: 92 },
+      { name: "Mathematics 1", prelim: 85, midterm: 88, final: null },
+      { name: "English Communication", prelim: 91, midterm: null, final: null }
     ]
   },
   "2601010214": {
     name: "Maria Santos",
     subjects: [
-      {
-        name: "Computer Programming 1",
-        prelim: { exam: 90, lab: 94, qar: 92, grade: 92 },
-        midterm: { exam: 93, lab: 96, qar: 95, grade: 95 },
-        final: { exam: 92, lab: 95, qar: 94, grade: 94 }
-      },
-      {
-        name: "Mathematics 1",
-        prelim: { exam: 75, lab: null, qar: 78, grade: 78 },
-        midterm: { exam: 80, lab: null, qar: 82, grade: 82 },
-        final: { exam: 83, lab: null, qar: 85, grade: 85 }
-      },
-      {
-        name: "English Communication",
-        prelim: { exam: 85, lab: null, qar: 88, grade: 88 },
-        midterm: { exam: 88, lab: null, qar: 90, grade: 90 },
-        final: { exam: 85, lab: null, qar: 87, grade: 87 }
-      },
-      {
-        name: "Physical Education 1",
-        prelim: { exam: 93, lab: null, qar: 95, grade: 95 },
-        midterm: { exam: 94, lab: null, qar: 96, grade: 96 },
-        final: { exam: 96, lab: null, qar: 98, grade: 98 }
-      }
+      { name: "Computer Programming 1", prelim: 92, midterm: 95, final: 94 },
+      { name: "Mathematics 1", prelim: 78, midterm: 82, final: 85 },
+      { name: "English Communication", prelim: 88, midterm: 90, final: 87 },
+      { name: "Physical Education 1", prelim: 95, midterm: 96, final: 98 }
     ]
   },
   "2601010215": {
     name: "Jose Reyes",
     subjects: [
-      {
-        name: "Computer Programming 1",
-        prelim: { exam: 72, lab: 76, qar: 74, grade: 75 },
-        midterm: { exam: 75, lab: 80, qar: 78, grade: 78 },
-        final: { exam: null, lab: null, qar: null, grade: null }
-      },
-      {
-        name: "Mathematics 1",
-        prelim: { exam: 68, lab: null, qar: 70, grade: 70 },
-        midterm: { exam: null, lab: null, qar: null, grade: null },
-        final: { exam: null, lab: null, qar: null, grade: null }
-      }
+      { name: "Computer Programming 1", prelim: 75, midterm: 78, final: null },
+      { name: "Mathematics 1", prelim: 70, midterm: null, final: null }
     ]
   }
 };
@@ -147,53 +102,22 @@ function displayResults(student, studentNumber) {
   resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-// Create a term column (Prelim / Midterm / Final)
-function createTermColumn(termName, termData) {
-  const isNone = termData.grade === null;
+// Create a term column
+function createTermColumn(termName, grade) {
+  const isNone = grade === null;
+  let gradeClass = "none";
+  if (!isNone) {
+    if (grade >= 90) gradeClass = "pass";
+    else if (grade >= 75) gradeClass = "warn";
+    else gradeClass = "fail";
+  }
 
   return `
     <div class="term-column">
       <div class="term-label">${termName}</div>
-      <div class="term-details">
-        <div class="detail-row">
-          <span class="detail-label">Exam Score</span>
-          <span class="detail-value ${getValueClass(termData.exam)}">${formatValue(termData.exam)}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Lab %</span>
-          <span class="detail-value ${getValueClass(termData.lab)}">${formatValue(termData.lab, true)}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">QAR</span>
-          <span class="detail-value ${getValueClass(termData.qar)}">${formatValue(termData.qar)}</span>
-        </div>
-      </div>
-      <div class="term-grade">
-        <span class="grade-label">Grade</span>
-        <span class="grade-number ${isNone ? 'none' : getGradeClass(termData.grade)}">${isNone ? 'N/A' : termData.grade}</span>
-      </div>
+      <div class="grade-number ${gradeClass}">${isNone ? "N/A" : grade}</div>
     </div>
   `;
-}
-
-// Format a value for display
-function formatValue(value, isLab = false) {
-  if (value === null || value === undefined) return "N/A";
-  return value;
-}
-
-// Get CSS class for a value
-function getValueClass(value) {
-  if (value === null || value === undefined) return "none";
-  return "";
-}
-
-// Get CSS class based on grade
-function getGradeClass(grade) {
-  if (grade === null) return "none";
-  if (grade >= 90) return "pass";
-  if (grade >= 75) return "warn";
-  return "fail";
 }
 
 // Show message
