@@ -4,6 +4,7 @@ const passwordInput = document.getElementById("passwordInput");
 const loginBtn = document.getElementById("loginBtn");
 const passwordError = document.getElementById("passwordError");
 const adminDashboard = document.getElementById("adminDashboard");
+const accountBadge = document.getElementById("accountBadge");
 const uploadModal = document.getElementById("uploadModal");
 const csvFileInput = document.getElementById("csvFileInput");
 const uploadArea = document.getElementById("uploadArea");
@@ -18,28 +19,174 @@ const gradesTableBody = document.getElementById("gradesTableBody");
 const gradesEmptyState = document.getElementById("gradesEmptyState");
 const gradesLoading = document.getElementById("gradesLoading");
 
-// ===== Auth =====
-function checkAuth() {
-  if (sessionStorage.getItem("admin_auth") === "true") {
-    showDashboard();
+// ===== Auth Helpers =====
+function findAccountByPassword(password) {
+  return ADMIN_ACCOUNTS.find((a) => a.password === password);
+}
+
+function showError(msg) {
+  passwordError.textContent = msg;
+  passwordError.classList.remove("hidden");
+}
+
+function hideError() {
+  passwordError.classList.add("hidden");
+}
+
+// ===== Session Management =====
+async function checkActiveSession(accountName) {
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(accountName)}&select=session_token`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.length > 0 ? data[0].session_token : null;
+  } catch {
+    return null;
   }
 }
 
-function attemptLogin() {
+async function createSession(accountName, sessionToken) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/admin_sessions`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify({
+      account_name: accountName,
+      session_token: sessionToken,
+    }),
+  });
+  return response.ok;
+}
+
+async function deleteSession(sessionToken) {
+  try {
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/admin_sessions?session_token=eq.${encodeURIComponent(sessionToken)}`,
+      {
+        method: "DELETE",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+  } catch {
+    // Ignore errors on logout
+  }
+}
+
+async function validateSession(accountName, sessionToken) {
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(accountName)}&session_token=eq.${encodeURIComponent(sessionToken)}&select=session_token`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+    if (!response.ok) return false;
+    const data = await response.json();
+    return data.length > 1;
+  } catch {
+    return false;
+  }
+}
+
+// ===== Auth =====
+async function checkAuth() {
+  const auth = sessionStorage.getItem("admin_auth");
+  const account = sessionStorage.getItem("admin_account");
+  const token = sessionStorage.getItem("admin_token");
+
+  if (auth === "true" && account && token) {
+    const valid = await validateSession(account, token);
+    if (valid) {
+      showDashboard(account);
+      return;
+    } else {
+      clearSession();
+    }
+  }
+}
+
+async function attemptLogin() {
   const pw = passwordInput.value;
-  if (pw === ADMIN_PASSWORD) {
-    sessionStorage.setItem("admin_auth", "true");
-    showDashboard();
-  } else {
-    passwordError.classList.remove("hidden");
+  hideError();
+
+  if (!pw) {
+    showError("Please enter a password.");
+    return;
+  }
+
+  const account = findAccountByPassword(pw);
+  if (!account) {
+    showError("Incorrect password. Try again.");
     passwordInput.value = "";
     passwordInput.focus();
+    return;
   }
+
+  // Check if account already has an active session
+  const existingToken = await checkActiveSession(account.name);
+  if (existingToken) {
+    showError("This account is already active. Log out from the other session first.");
+    passwordInput.value = "";
+    passwordInput.focus();
+    return;
+  }
+
+  // Create new session
+  const sessionToken = crypto.randomUUID();
+  const created = await createSession(account.name, sessionToken);
+  if (!created) {
+    showError("Failed to create session. Try again.");
+    return;
+  }
+
+  // Store session in sessionStorage
+  sessionStorage.setItem("admin_auth", "true");
+  sessionStorage.setItem("admin_account", account.name);
+  sessionStorage.setItem("admin_token", sessionToken);
+
+  showDashboard(account.name);
 }
 
-function showDashboard() {
+async function logout() {
+  const token = sessionStorage.getItem("admin_token");
+  if (token) {
+    await deleteSession(token);
+  }
+  clearSession();
+  passwordModal.classList.remove("hidden");
+  adminDashboard.classList.add("hidden");
+  passwordInput.value = "";
+  hideError();
+}
+
+function clearSession() {
+  sessionStorage.removeItem("admin_auth");
+  sessionStorage.removeItem("admin_account");
+  sessionStorage.removeItem("admin_token");
+}
+
+function showDashboard(accountName) {
   passwordModal.classList.add("hidden");
   adminDashboard.classList.remove("hidden");
+  accountBadge.textContent = accountName;
   loadSections();
 }
 
