@@ -10,8 +10,6 @@ if (!url || !key) {
 
 const content = `const SUPABASE_URL = "${url}";
 const SUPABASE_ANON_KEY = "${key}";
-
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 `;
 
 fs.writeFileSync("public/config.js", content);

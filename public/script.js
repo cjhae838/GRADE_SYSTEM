@@ -27,18 +27,23 @@ async function checkGrades() {
   setLoading(true);
 
   try {
-    const { data, error } = await supabase
-      .from("grades")
-      .select("period, subject_code, section, student_name, grade")
-      .eq("student_no", studentNumber);
+    const url = `${SUPABASE_URL}/rest/v1/grades?student_no=eq.${encodeURIComponent(studentNumber)}&select=period,subject_code,section,student_name,grade`;
+    const response = await fetch(url, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+    });
 
-    if (error) {
-      console.error("Supabase query error:", error.message, error.details);
+    if (!response.ok) {
+      console.error("Supabase response error:", response.status, await response.text());
       showMessage("Something went wrong. Please try again later.", "error");
       hideResults();
       setLoading(false);
       return;
     }
+
+    const data = await response.json();
 
     if (!data || data.length === 0) {
       showMessage(
