@@ -19,6 +19,8 @@ const gradesTableBody = document.getElementById("gradesTableBody");
 const gradesEmptyState = document.getElementById("gradesEmptyState");
 const gradesLoading = document.getElementById("gradesLoading");
 
+const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+
 // ===== Auth Helpers =====
 function findAccountByPassword(password) {
   return ADMIN_ACCOUNTS.find((a) => a.password === password);
@@ -34,10 +36,30 @@ function hideError() {
 }
 
 // ===== Session Management =====
-async function checkActiveSession(accountName) {
+async function recordActivity(accountName) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/admin_sessions`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates",
+      },
+      body: JSON.stringify({
+        account_name: accountName,
+        last_activity: new Date().toISOString(),
+      }),
+    });
+  } catch {
+    // Non-critical — ignore errors
+  }
+}
+
+async function isSessionActive(accountName) {
   try {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(accountName)}&select=session_token`,
+      `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(accountName)}&select=last_activity`,
       {
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -45,35 +67,21 @@ async function checkActiveSession(accountName) {
         },
       }
     );
-    if (!response.ok) return null;
+    if (!response.ok) return false;
     const data = await response.json();
-    return data.length > 0 ? data[0].session_token : null;
+    if (data.length === 0) return false;
+    const lastActive = new Date(data[0].last_activity);
+    const now = new Date();
+    return now - lastActive < SESSION_TIMEOUT_MS;
   } catch {
-    return null;
+    return false;
   }
 }
 
-async function createSession(accountName, sessionToken) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/admin_sessions`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      "Content-Type": "application/json",
-      Prefer: "return=minimal",
-    },
-    body: JSON.stringify({
-      account_name: accountName,
-      session_token: sessionToken,
-    }),
-  });
-  return response.ok;
-}
-
-async function deleteSession(sessionToken) {
+async function deleteSession(accountName) {
   try {
     await fetch(
-      `${SUPABASE_URL}/rest/v1/admin_sessions?session_token=eq.${encodeURIComponent(sessionToken)}`,
+      `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(accountName)}`,
       {
         method: "DELETE",
         headers: {
@@ -87,37 +95,20 @@ async function deleteSession(sessionToken) {
   }
 }
 
-async function validateSession(accountName, sessionToken) {
-  try {
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(accountName)}&session_token=eq.${encodeURIComponent(sessionToken)}&select=session_token`,
-      {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-      }
-    );
-    if (!response.ok) return false;
-    const data = await response.json();
-    return data.length > 1;
-  } catch {
-    return false;
-  }
-}
-
 // ===== Auth =====
 async function checkAuth() {
   const auth = sessionStorage.getItem("admin_auth");
   const account = sessionStorage.getItem("admin_account");
-  const token = sessionStorage.getItem("admin_token");
 
-  if (auth === "true" && account && token) {
-    const valid = await validateSession(account, token);
-    if (valid) {
+  if (auth === "true" && account) {
+    const active = await isSessionActive(account);
+    if (active) {
+      // Session still active — auto-login
+      await recordActivity(account);
       showDashboard(account);
       return;
     } else {
+      // Session expired — clear and show login
       clearSession();
     }
   }
@@ -141,34 +132,28 @@ async function attemptLogin() {
   }
 
   // Check if account already has an active session
-  const existingToken = await checkActiveSession(account.name);
-  if (existingToken) {
+  const active = await isSessionActive(account.name);
+  if (active) {
     showError("This account is already active. Log out from the other session first.");
     passwordInput.value = "";
     passwordInput.focus();
     return;
   }
 
-  // Create new session
-  const sessionToken = crypto.randomUUID();
-  const created = await createSession(account.name, sessionToken);
-  if (!created) {
-    showError("Failed to create session. Try again.");
-    return;
-  }
+  // Create session — record activity
+  await recordActivity(account.name);
 
   // Store session in sessionStorage
   sessionStorage.setItem("admin_auth", "true");
   sessionStorage.setItem("admin_account", account.name);
-  sessionStorage.setItem("admin_token", sessionToken);
 
   showDashboard(account.name);
 }
 
 async function logout() {
-  const token = sessionStorage.getItem("admin_token");
-  if (token) {
-    await deleteSession(token);
+  const account = sessionStorage.getItem("admin_account");
+  if (account) {
+    await deleteSession(account);
   }
   clearSession();
   passwordModal.classList.remove("hidden");
@@ -180,7 +165,6 @@ async function logout() {
 function clearSession() {
   sessionStorage.removeItem("admin_auth");
   sessionStorage.removeItem("admin_account");
-  sessionStorage.removeItem("admin_token");
 }
 
 function showDashboard(accountName) {
@@ -350,6 +334,10 @@ async function uploadCSV() {
       return;
     }
 
+    // Record activity before upload
+    const account = sessionStorage.getItem("admin_account");
+    if (account) await recordActivity(account);
+
     let inserted = 0;
     for (let i = 0; i < gradeRows.length; i += 50) {
       const batch = gradeRows.slice(i, i + 50);
@@ -494,8 +482,10 @@ async function loadSections() {
 }
 
 // Auto-load grades when section changes
-sectionFilter.addEventListener("change", () => {
+sectionFilter.addEventListener("change", async () => {
   if (sectionFilter.value) {
+    const account = sessionStorage.getItem("admin_account");
+    if (account) await recordActivity(account);
     loadGrades();
   } else {
     showEmptyState();
