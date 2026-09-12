@@ -27,7 +27,10 @@ async function checkGrades() {
   setLoading(true);
 
   try {
-    const url = `${SUPABASE_URL}/rest/v1/grades?student_no=eq.${encodeURIComponent(studentNumber)}&select=period,subject_code,section,student_name,grade`;
+    // Encrypt student number for query
+    const encryptedStudentNo = await CryptoModule.encrypt(studentNumber);
+
+    const url = `${SUPABASE_URL}/rest/v1/grades?student_no=eq.${encodeURIComponent(encryptedStudentNo)}&select=period,subject_code,section,student_name,grade`;
     const response = await fetch(url, {
       headers: {
         apikey: SUPABASE_ANON_KEY,
@@ -55,8 +58,17 @@ async function checkGrades() {
       return;
     }
 
+    // Decrypt student_name and section in all rows
+    const decryptedData = await Promise.all(
+      data.map(async (row) => ({
+        ...row,
+        student_name: await CryptoModule.decrypt(row.student_name),
+        section: await CryptoModule.decrypt(row.section),
+      }))
+    );
+
     // Transform flat rows into grouped subjects
-    const student = transformGrades(data);
+    const student = transformGrades(decryptedData);
     hideMessage();
     displayResults(student, studentNumber);
   } catch (err) {
