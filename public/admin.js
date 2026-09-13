@@ -334,25 +334,27 @@ async function uploadCSV() {
       headerIndex[normalizeHeader(h)] = i;
     });
 
+    // Parse CSV rows — keep plaintext values for duplicate checking
     const gradeRows = [];
+    let skippedValidation = 0;
     for (const row of rows) {
       const period = row[headerIndex["P/M/F"]]?.trim().toUpperCase();
-      if (!["P", "M", "F"].includes(period)) continue;
+      if (!["P", "M", "F"].includes(period)) { skippedValidation++; continue; }
 
       const subjectCode = row[headerIndex["SUBJECT"]]?.trim();
-      if (!subjectCode) continue;
+      if (!subjectCode) { skippedValidation++; continue; }
 
       const section = row[headerIndex["SECTION"]]?.trim();
-      if (!section) continue;
+      if (!section) { skippedValidation++; continue; }
 
       const studentNo = row[headerIndex["STUDENT NO."]]?.trim();
-      if (!studentNo) continue;
+      if (!studentNo) { skippedValidation++; continue; }
 
       const studentName = row[headerIndex["STUDENT NAME"]]?.trim();
-      if (!studentName) continue;
+      if (!studentName) { skippedValidation++; continue; }
 
       const grade = parseFloat(row[headerIndex["PRELIM"]]);
-      if (isNaN(grade)) continue;
+      if (isNaN(grade)) { skippedValidation++; continue; }
 
       const encryptedStudentNo = await CryptoModule.encrypt(studentNo);
       const encryptedStudentName = await CryptoModule.encrypt(studentName);
@@ -365,6 +367,8 @@ async function uploadCSV() {
         student_no: encryptedStudentNo,
         student_name: encryptedStudentName,
         grade,
+        // Plaintext for duplicate checking
+        _studentNo: studentNo,
       });
     }
 
@@ -379,9 +383,56 @@ async function uploadCSV() {
     const account = sessionStorage.getItem("admin_account");
     if (account) await recordActivity(account);
 
+    // Fetch existing grades to detect duplicates
+    showUploadStatus("Checking for duplicates...", "info");
+    const existingKeys = new Set();
+    try {
+      const existingResponse = await fetch(
+        `${SUPABASE_URL}/rest/v1/grades?select=student_no,subject_code,period`,
+        {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }
+      );
+      if (existingResponse.ok) {
+        const existingData = await existingResponse.json();
+        for (const row of existingData) {
+          const decryptedStudentNo = await CryptoModule.decrypt(row.student_no);
+          existingKeys.add(`${decryptedStudentNo}|${row.subject_code}|${row.period}`);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching existing grades:", err);
+      // Continue without duplicate checking if fetch fails
+    }
+
+    // Filter out duplicates
+    const newRows = [];
+    let skippedDuplicates = 0;
+    for (const row of gradeRows) {
+      const key = `${row._studentNo}|${row.subject_code}|${row.period}`;
+      if (existingKeys.has(key)) {
+        skippedDuplicates++;
+      } else {
+        newRows.push(row);
+      }
+    }
+
+    if (newRows.length === 0) {
+      const msg = `All ${skippedDuplicates} rows are duplicates. No new data to upload.`;
+      showUploadStatus(msg, "error");
+      uploadBtn.disabled = false;
+      resetUploadBtn();
+      return;
+    }
+
+    // Batch insert — continue on failure
     let inserted = 0;
-    for (let i = 0; i < gradeRows.length; i += 50) {
-      const batch = gradeRows.slice(i, i + 50);
+    let failed = 0;
+    for (let i = 0; i < newRows.length; i += 50) {
+      const batch = newRows.slice(i, i + 50).map(({ _studentNo, ...rest }) => rest);
       const response = await fetch(`${SUPABASE_URL}/rest/v1/grades`, {
         method: "POST",
         headers: {
@@ -395,19 +446,24 @@ async function uploadCSV() {
 
       if (!response.ok) {
         const err = await response.text();
-        console.error("Insert error:", err);
-        showUploadStatus(`Error inserting rows: ${err}`, "error");
-        uploadBtn.disabled = false;
-        resetUploadBtn();
-        return;
+        console.error("Batch insert error:", err);
+        failed += batch.length;
+      } else {
+        inserted += batch.length;
       }
-      inserted += batch.length;
     }
 
-    showUploadStatus(`Successfully uploaded ${inserted} rows.`, "success");
-    loadSections();
+    // Build status message
+    const parts = [];
+    if (inserted > 0) parts.push(`${inserted} uploaded`);
+    if (skippedDuplicates > 0) parts.push(`${skippedDuplicates} duplicates skipped`);
+    if (skippedValidation > 0) parts.push(`${skippedValidation} invalid rows skipped`);
+    if (failed > 0) parts.push(`${failed} failed`);
+    const statusMsg = parts.join(". ") + ".";
+    const statusType = failed > 0 ? "error" : "success";
+    showUploadStatus(statusMsg, statusType);
 
-    // Auto-load if a section is selected
+    loadSections();
     if (sectionFilter.value) {
       loadGrades();
     }

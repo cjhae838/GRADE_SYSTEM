@@ -770,6 +770,11 @@ body {
   color: var(--error);
 }
 
+.upload-status.info {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
 /* ===== Filter Group ===== */
 .filter-group {
   margin-bottom: 16px;
