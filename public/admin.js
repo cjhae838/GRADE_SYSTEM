@@ -720,6 +720,9 @@ async function loadGrades() {
       }
     }
 
+    // Sort by student name alphabetically
+    decryptedRows.sort((a, b) => a.student_name.localeCompare(b.student_name));
+
     if (decryptedRows.length === 0) {
       gradesEmptyState.innerHTML = `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="40" height="40">
