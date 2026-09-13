@@ -775,6 +775,41 @@ body {
   color: var(--primary);
 }
 
+.upload-status strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.report-summary {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.report-success { color: var(--success); }
+.report-warn { color: var(--warning); }
+.report-error { color: var(--error); }
+
+.report-section {
+  margin-top: 8px;
+  font-size: 0.78rem;
+}
+
+.report-list {
+  margin: 4px 0 0 18px;
+  padding: 0;
+  list-style: disc;
+}
+
+.report-list li {
+  margin-bottom: 2px;
+  line-height: 1.4;
+}
+
+.report-more {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* ===== Filter Group ===== */
 .filter-group {
   margin-bottom: 16px;

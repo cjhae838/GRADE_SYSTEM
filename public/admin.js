@@ -334,27 +334,51 @@ async function uploadCSV() {
       headerIndex[normalizeHeader(h)] = i;
     });
 
-    // Parse CSV rows — keep plaintext values for duplicate checking
+    // Parse CSV rows — track validation details
     const gradeRows = [];
-    let skippedValidation = 0;
-    for (const row of rows) {
+    const validationErrors = [];
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowNum = i + 2; // +2 because row 1 is header, and 0-indexed
+
       const period = row[headerIndex["P/M/F"]]?.trim().toUpperCase();
-      if (!["P", "M", "F"].includes(period)) { skippedValidation++; continue; }
+      if (!["P", "M", "F"].includes(period)) {
+        const periodVal = row[headerIndex["P/M/F"]]?.trim() || "(empty)";
+        validationErrors.push({ row: rowNum, reason: "Invalid period \"" + periodVal + "\"" });
+        continue;
+      }
 
       const subjectCode = row[headerIndex["SUBJECT"]]?.trim();
-      if (!subjectCode) { skippedValidation++; continue; }
+      if (!subjectCode) {
+        validationErrors.push({ row: rowNum, reason: "Empty subject code" });
+        continue;
+      }
 
       const section = row[headerIndex["SECTION"]]?.trim();
-      if (!section) { skippedValidation++; continue; }
+      if (!section) {
+        validationErrors.push({ row: rowNum, reason: "Empty section" });
+        continue;
+      }
 
       const studentNo = row[headerIndex["STUDENT NO."]]?.trim();
-      if (!studentNo) { skippedValidation++; continue; }
+      if (!studentNo) {
+        validationErrors.push({ row: rowNum, reason: "Empty student number" });
+        continue;
+      }
 
       const studentName = row[headerIndex["STUDENT NAME"]]?.trim();
-      if (!studentName) { skippedValidation++; continue; }
+      if (!studentName) {
+        validationErrors.push({ row: rowNum, reason: "Empty student name" });
+        continue;
+      }
 
-      const grade = parseFloat(row[headerIndex["PRELIM"]]);
-      if (isNaN(grade)) { skippedValidation++; continue; }
+      const gradeVal = row[headerIndex["PRELIM"]]?.trim();
+      const grade = parseFloat(gradeVal);
+      if (isNaN(grade)) {
+        const gradeDisplay = gradeVal || "(empty)";
+        validationErrors.push({ row: rowNum, reason: "Invalid grade \"" + gradeDisplay + "\"" });
+        continue;
+      }
 
       const encryptedStudentNo = await CryptoModule.encrypt(studentNo);
       const encryptedStudentName = await CryptoModule.encrypt(studentName);
@@ -367,9 +391,22 @@ async function uploadCSV() {
         student_no: encryptedStudentNo,
         student_name: encryptedStudentName,
         grade,
-        // Plaintext for duplicate checking
         _studentNo: studentNo,
+        _studentName: studentName,
+        _subjectCode: subjectCode,
       });
+    }
+
+    if (gradeRows.length === 0 && validationErrors.length > 0) {
+      const details = validationErrors.slice(0, 10).map((e) => `Row ${e.row}: ${e.reason}`).join("<br>");
+      const more = validationErrors.length > 10 ? `<br>...and ${validationErrors.length - 10} more errors` : "";
+      showUploadStatusHtml(
+        `<strong>No valid rows found.</strong><br>${details}${more}`,
+        "error"
+      );
+      uploadBtn.disabled = false;
+      resetUploadBtn();
+      return;
     }
 
     if (gradeRows.length === 0) {
@@ -405,24 +442,29 @@ async function uploadCSV() {
       }
     } catch (err) {
       console.error("Error fetching existing grades:", err);
-      // Continue without duplicate checking if fetch fails
     }
 
-    // Filter out duplicates
+    // Filter out duplicates — track which ones were skipped
     const newRows = [];
-    let skippedDuplicates = 0;
+    const duplicateRows = [];
     for (const row of gradeRows) {
       const key = `${row._studentNo}|${row.subject_code}|${row.period}`;
       if (existingKeys.has(key)) {
-        skippedDuplicates++;
+        duplicateRows.push(row);
       } else {
         newRows.push(row);
       }
     }
 
     if (newRows.length === 0) {
-      const msg = `All ${skippedDuplicates} rows are duplicates. No new data to upload.`;
-      showUploadStatus(msg, "error");
+      const details = duplicateRows.slice(0, 10).map((r) =>
+        `${r._studentNo} — ${r._studentName} (${r.subject_code} ${r.period})`
+      ).join("<br>");
+      const more = duplicateRows.length > 10 ? `<br>...and ${duplicateRows.length - 10} more duplicates` : "";
+      showUploadStatusHtml(
+        `<strong>All ${duplicateRows.length} rows are duplicates. No new data to upload.</strong><br><br>Duplicate entries:<br>${details}${more}`,
+        "error"
+      );
       uploadBtn.disabled = false;
       resetUploadBtn();
       return;
@@ -431,8 +473,9 @@ async function uploadCSV() {
     // Batch insert — continue on failure
     let inserted = 0;
     let failed = 0;
+    const failedBatches = [];
     for (let i = 0; i < newRows.length; i += 50) {
-      const batch = newRows.slice(i, i + 50).map(({ _studentNo, ...rest }) => rest);
+      const batch = newRows.slice(i, i + 50).map(({ _studentNo, _studentName, _subjectCode, ...rest }) => rest);
       const response = await fetch(`${SUPABASE_URL}/rest/v1/grades`, {
         method: "POST",
         headers: {
@@ -448,20 +491,14 @@ async function uploadCSV() {
         const err = await response.text();
         console.error("Batch insert error:", err);
         failed += batch.length;
+        failedBatches.push({ start: i + 1, end: Math.min(i + 50, newRows.length), error: err });
       } else {
         inserted += batch.length;
       }
     }
 
-    // Build status message
-    const parts = [];
-    if (inserted > 0) parts.push(`${inserted} uploaded`);
-    if (skippedDuplicates > 0) parts.push(`${skippedDuplicates} duplicates skipped`);
-    if (skippedValidation > 0) parts.push(`${skippedValidation} invalid rows skipped`);
-    if (failed > 0) parts.push(`${failed} failed`);
-    const statusMsg = parts.join(". ") + ".";
-    const statusType = failed > 0 ? "error" : "success";
-    showUploadStatus(statusMsg, statusType);
+    // Build detailed status message
+    buildUploadReport(inserted, duplicateRows, validationErrors, failedBatches, newRows.length);
 
     loadSections();
     if (sectionFilter.value) {
@@ -474,6 +511,50 @@ async function uploadCSV() {
     uploadBtn.disabled = false;
     resetUploadBtn();
   }
+}
+
+function buildUploadReport(inserted, duplicateRows, validationErrors, failedBatches, totalNew) {
+  const sections = [];
+
+  // Summary line
+  const summaryParts = [];
+  if (inserted > 0) summaryParts.push(`<span class="report-success">${inserted} uploaded</span>`);
+  if (duplicateRows.length > 0) summaryParts.push(`<span class="report-warn">${duplicateRows.length} duplicates skipped</span>`);
+  if (validationErrors.length > 0) summaryParts.push(`<span class="report-error">${validationErrors.length} invalid rows</span>`);
+  if (failedBatches.length > 0) summaryParts.push(`<span class="report-error">${failedBatches.reduce((s, b) => s + b.end - b.start + 1, 0)} failed</span>`);
+  sections.push(`<div class="report-summary">${summaryParts.join(" &middot; ")}</div>`);
+
+  // Duplicate details
+  if (duplicateRows.length > 0) {
+    const show = duplicateRows.slice(0, 15);
+    const list = show.map((r) =>
+      `<li>${escapeHtml(r._studentNo)} &mdash; ${escapeHtml(r._studentName)} | ${escapeHtml(r.subject_code)} ${r.period}</li>`
+    ).join("");
+    const more = duplicateRows.length > 15 ? `<li class="report-more">...and ${duplicateRows.length - 15} more</li>` : "";
+    sections.push(`<div class="report-section"><strong>Duplicates skipped:</strong><ul class="report-list">${list}${more}</ul></div>`);
+  }
+
+  // Validation errors
+  if (validationErrors.length > 0) {
+    const show = validationErrors.slice(0, 15);
+    const list = show.map((e) =>
+      `<li>Row ${e.row}: ${escapeHtml(e.reason)}</li>`
+    ).join("");
+    const more = validationErrors.length > 15 ? `<li class="report-more">...and ${validationErrors.length - 15} more</li>` : "";
+    sections.push(`<div class="report-section"><strong>Invalid rows skipped:</strong><ul class="report-list">${list}${more}</ul></div>`);
+  }
+
+  // Failed batches
+  if (failedBatches.length > 0) {
+    const list = failedBatches.map((b) =>
+      `<li>Rows ${b.start}–${b.end}: ${escapeHtml(b.error).substring(0, 100)}</li>`
+    ).join("");
+    sections.push(`<div class="report-section"><strong>Insert errors:</strong><ul class="report-list">${list}</ul></div>`);
+  }
+
+  const html = sections.join("");
+  const hasErrors = failedBatches.length > 0 || validationErrors.length > 0;
+  showUploadStatusHtml(html, hasErrors ? "error" : "success");
 }
 
 function resetUploadBtn() {
@@ -532,6 +613,11 @@ function normalizeHeader(h) {
 
 function showUploadStatus(msg, type) {
   uploadStatus.textContent = msg;
+  uploadStatus.className = `upload-status ${type}`;
+}
+
+function showUploadStatusHtml(html, type) {
+  uploadStatus.innerHTML = html;
   uploadStatus.className = `upload-status ${type}`;
 }
 
