@@ -624,12 +624,11 @@ function showUploadStatusHtml(html, type) {
 async function loadSections() {
   try {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/grades?select=section&order=section`,
+      `${SUPABASE_URL}/rest/v1/sections?select=name&order=name`,
       {
         headers: {
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          Range: "0-9999",
         },
       }
     );
@@ -640,11 +639,11 @@ async function loadSections() {
     }
 
     const data = await response.json();
-    const unique = [...new Set(data.map((row) => row.section))].sort();
+    const sectionNames = data.map((row) => row.name);
 
     const currentVal = sectionFilter.value;
     sectionFilter.innerHTML = '<option value="">Select a section</option>';
-    unique.forEach((sec) => {
+    sectionNames.forEach((sec) => {
       const opt = document.createElement("option");
       opt.value = sec;
       opt.textContent = sec;
@@ -652,12 +651,89 @@ async function loadSections() {
     });
 
     // Restore previous selection if still valid
-    if (currentVal && unique.includes(currentVal)) {
+    if (currentVal && sectionNames.includes(currentVal)) {
       sectionFilter.value = currentVal;
     }
   } catch (err) {
     console.error("Error loading sections:", err);
     sectionFilter.innerHTML = '<option value="">Error loading sections</option>';
+  }
+}
+
+async function addSection() {
+  const input = document.getElementById("newSectionInput");
+  const name = input.value.trim();
+  if (!name) {
+    showUploadStatus("Please enter a section name", "error");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/sections`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify({ name }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      if (err.includes("duplicate") || err.includes("unique")) {
+        showUploadStatus("Section \"" + name + "\" already exists", "error");
+      } else {
+        showUploadStatus("Failed to add section: " + err, "error");
+      }
+      return;
+    }
+
+    input.value = "";
+    showUploadStatus("Section \"" + name + "\" added", "success");
+    await loadSections();
+    sectionFilter.value = name;
+    sectionFilter.dispatchEvent(new Event("change"));
+  } catch (err) {
+    console.error("Error adding section:", err);
+    showUploadStatus("Error adding section", "error");
+  }
+}
+
+async function deleteSection() {
+  const section = sectionFilter.value;
+  if (!section) {
+    showUploadStatus("Select a section to delete", "error");
+    return;
+  }
+
+  if (!confirm("Delete section \"" + section + "\"?\nThis will NOT delete the grade records, only the section from the dropdown.")) {
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/sections?name=eq.${encodeURIComponent(section)}`,
+      {
+        method: "DELETE",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      showUploadStatus("Failed to delete section", "error");
+      return;
+    }
+
+    showUploadStatus("Section \"" + section + "\" deleted", "success");
+    await loadSections();
+  } catch (err) {
+    console.error("Error deleting section:", err);
+    showUploadStatus("Error deleting section", "error");
   }
 }
 

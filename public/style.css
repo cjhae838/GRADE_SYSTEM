@@ -1072,15 +1072,97 @@ body {
 
 .toolbar-left {
   flex: 1;
-  max-width: 320px;
 }
 
 .toolbar-left .input-label {
   margin-bottom: 8px;
 }
 
-.toolbar-left .neo-select {
-  width: 100%;
+.toolbar-section-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolbar-section-row .neo-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.neo-input-sm {
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--neo-inset);
+  outline: none;
+  transition: var(--transition);
+  width: 160px;
+  flex-shrink: 0;
+}
+
+.neo-input-sm:focus {
+  box-shadow: var(--neo-inset), 0 0 0 2px var(--primary);
+}
+
+.neo-input-sm::placeholder {
+  color: var(--text-muted);
+}
+
+.toolbar-action-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 18px;
+  font-size: 0.82rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  color: #fff;
+  background: var(--primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.toolbar-action-btn:hover {
+  background: #1d4ed8;
+}
+
+.toolbar-action-btn:active {
+  box-shadow: var(--neo-inset-sm);
+}
+
+.toolbar-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 18px;
+  font-size: 0.82rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  box-shadow: var(--neo-outset-sm);
+  flex-shrink: 0;
+}
+
+.toolbar-delete-btn:hover {
+  color: var(--error);
+  background: var(--surface-hover);
+}
+
+.toolbar-delete-btn:active {
+  box-shadow: var(--neo-inset-sm);
 }
 
 .toolbar-right {
@@ -1386,6 +1468,25 @@ body {
 
   .toolbar-left {
     max-width: 100%;
+  }
+
+  .toolbar-section-row {
+    flex-wrap: wrap;
+  }
+
+  .toolbar-section-row .neo-select {
+    min-width: 100%;
+  }
+
+  .neo-input-sm {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .toolbar-action-btn,
+  .toolbar-delete-btn {
+    flex: 1;
+    justify-content: center;
   }
 
   .toolbar-right {
