@@ -382,12 +382,11 @@ async function uploadCSV() {
 
       const encryptedStudentNo = await CryptoModule.encrypt(studentNo);
       const encryptedStudentName = await CryptoModule.encrypt(studentName);
-      const encryptedSection = await CryptoModule.encrypt(section);
 
       gradeRows.push({
         period,
         subject_code: subjectCode,
-        section: encryptedSection,
+        section: section,
         student_no: encryptedStudentNo,
         student_name: encryptedStudentName,
         grade,
@@ -425,7 +424,7 @@ async function uploadCSV() {
     const existingKeys = new Set();
     try {
       const existingResponse = await fetch(
-        `${SUPABASE_URL}/rest/v1/grades?select=student_no,subject_code,period`,
+        `${SUPABASE_URL}/rest/v1/grades?select=student_no,subject_code,period,section&range=0-9999`,
         {
           headers: {
             apikey: SUPABASE_ANON_KEY,
@@ -437,7 +436,7 @@ async function uploadCSV() {
         const existingData = await existingResponse.json();
         for (const row of existingData) {
           const decryptedStudentNo = await CryptoModule.decrypt(row.student_no);
-          existingKeys.add(`${decryptedStudentNo}|${row.subject_code}|${row.period}`);
+          existingKeys.add(`${decryptedStudentNo}|${row.subject_code}|${row.period}|${row.section}`);
         }
       }
     } catch (err) {
@@ -448,7 +447,7 @@ async function uploadCSV() {
     const newRows = [];
     const duplicateRows = [];
     for (const row of gradeRows) {
-      const key = `${row._studentNo}|${row.subject_code}|${row.period}`;
+      const key = `${row._studentNo}|${row.subject_code}|${row.period}|${row.section}`;
       if (existingKeys.has(key)) {
         duplicateRows.push(row);
       } else {
@@ -641,10 +640,7 @@ async function loadSections() {
     }
 
     const data = await response.json();
-    const decryptedSections = await Promise.all(
-      data.map((row) => CryptoModule.decrypt(row.section))
-    );
-    const unique = [...new Set(decryptedSections)].sort();
+    const unique = [...new Set(data.map((row) => row.section))].sort();
 
     const currentVal = sectionFilter.value;
     sectionFilter.innerHTML = '<option value="">Select a section</option>';
@@ -689,7 +685,7 @@ async function loadGrades() {
 
   try {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/grades?select=period,subject_code,section,student_no,student_name,grade&order=student_name,subject_code`,
+      `${SUPABASE_URL}/rest/v1/grades?section=eq.${encodeURIComponent(section)}&select=period,subject_code,student_no,student_name,grade&order=student_name,subject_code`,
       {
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -707,23 +703,17 @@ async function loadGrades() {
 
     const data = await response.json();
 
-    // Decrypt and filter by section
+    // Decrypt student_no and student_name
     const decryptedRows = [];
     for (const row of data) {
-      const decryptedSection = await CryptoModule.decrypt(row.section);
-      if (decryptedSection === section) {
-        decryptedRows.push({
-          student_no: await CryptoModule.decrypt(row.student_no),
-          student_name: await CryptoModule.decrypt(row.student_name),
-          subject_code: row.subject_code,
-          period: row.period,
-          grade: row.grade,
-        });
-      }
+      decryptedRows.push({
+        student_no: await CryptoModule.decrypt(row.student_no),
+        student_name: await CryptoModule.decrypt(row.student_name),
+        subject_code: row.subject_code,
+        period: row.period,
+        grade: row.grade,
+      });
     }
-
-    // Sort by student name alphabetically
-    decryptedRows.sort((a, b) => a.student_name.localeCompare(b.student_name));
 
     if (decryptedRows.length === 0) {
       gradesEmptyState.innerHTML = `
