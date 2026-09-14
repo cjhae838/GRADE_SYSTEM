@@ -630,6 +630,7 @@ async function loadSections() {
         headers: {
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          Range: "0-9999",
         },
       }
     );
@@ -688,11 +689,12 @@ async function loadGrades() {
 
   try {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/grades?select=period,subject_code,section,student_no,student_name,grade&order=student_no,subject_code`,
+      `${SUPABASE_URL}/rest/v1/grades?select=period,subject_code,section,student_no,student_name,grade&order=student_name,subject_code`,
       {
         headers: {
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          Range: "0-9999",
         },
       }
     );
