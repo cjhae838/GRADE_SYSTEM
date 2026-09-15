@@ -23,6 +23,7 @@ const loggingOutModal = document.getElementById("loggingOutModal");
 
 const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 const MIN_MODAL_DISPLAY_MS = 2000; // 2 seconds minimum display time
+const SESSION_TOKEN_KEY = "admin_session_token";
 
 // ===== Helpers =====
 function wait(ms) {
@@ -46,6 +47,7 @@ function hideError() {
 // ===== Session Management =====
 async function recordActivity(accountName) {
   try {
+    const token = sessionStorage.getItem(SESSION_TOKEN_KEY) || "";
     await fetch(`${SUPABASE_URL}/rest/v1/admin_sessions`, {
       method: "POST",
       headers: {
@@ -57,6 +59,7 @@ async function recordActivity(accountName) {
       body: JSON.stringify({
         account_name: accountName,
         last_activity: new Date().toISOString(),
+        session_token: token,
       }),
     });
   } catch {
@@ -67,7 +70,7 @@ async function recordActivity(accountName) {
 async function isSessionActive(accountName) {
   try {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(accountName)}&select=last_activity`,
+      `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(accountName)}&select=last_activity,session_token`,
       {
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -78,9 +81,23 @@ async function isSessionActive(accountName) {
     if (!response.ok) return false;
     const data = await response.json();
     if (data.length === 0) return false;
+
     const lastActive = new Date(data[0].last_activity);
     const now = new Date();
-    return now - lastActive < SESSION_TIMEOUT_MS;
+
+    // Expired — delete stale row
+    if (now - lastActive >= SESSION_TIMEOUT_MS) {
+      await deleteSession(accountName);
+      return false;
+    }
+
+    // Check if token matches current tab
+    const localToken = sessionStorage.getItem(SESSION_TOKEN_KEY);
+    if (!localToken || localToken !== data[0].session_token) {
+      return false;
+    }
+
+    return true;
   } catch {
     return false;
   }
@@ -107,8 +124,9 @@ async function deleteSession(accountName) {
 async function checkAuth() {
   const auth = sessionStorage.getItem("admin_auth");
   const account = sessionStorage.getItem("admin_account");
+  const token = sessionStorage.getItem(SESSION_TOKEN_KEY);
 
-  if (auth === "true" && account) {
+  if (auth === "true" && account && token) {
     loggingInModal.classList.remove("hidden");
     const startTime = Date.now();
     const active = await isSessionActive(account);
@@ -169,7 +187,9 @@ async function attemptLogin() {
     return;
   }
 
-  // Create session — record activity
+  // Create session — generate token, record activity
+  const token = crypto.randomUUID();
+  sessionStorage.setItem(SESSION_TOKEN_KEY, token);
   await recordActivity(account.name);
 
   // Store session in sessionStorage
@@ -206,6 +226,7 @@ async function logout() {
 function clearSession() {
   sessionStorage.removeItem("admin_auth");
   sessionStorage.removeItem("admin_account");
+  sessionStorage.removeItem(SESSION_TOKEN_KEY);
 }
 
 function showDashboard(accountName) {
