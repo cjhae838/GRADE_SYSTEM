@@ -47,7 +47,7 @@ function hideError() {
 // ===== Session Management =====
 async function recordActivity(accountName) {
   try {
-    const token = sessionStorage.getItem(SESSION_TOKEN_KEY) || "";
+    const token = localStorage.getItem(SESSION_TOKEN_KEY) || "";
     await fetch(`${SUPABASE_URL}/rest/v1/admin_sessions`, {
       method: "POST",
       headers: {
@@ -70,7 +70,7 @@ async function recordActivity(accountName) {
 async function isSessionActive(accountName) {
   try {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(accountName)}&select=last_activity,session_token`,
+      `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(accountName)}&select=last_activity`,
       {
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -88,12 +88,6 @@ async function isSessionActive(accountName) {
     // Expired — delete stale row
     if (now - lastActive >= SESSION_TIMEOUT_MS) {
       await deleteSession(accountName);
-      return false;
-    }
-
-    // Check if token matches current tab
-    const localToken = sessionStorage.getItem(SESSION_TOKEN_KEY);
-    if (!localToken || localToken !== data[0].session_token) {
       return false;
     }
 
@@ -122,33 +116,45 @@ async function deleteSession(accountName) {
 
 // ===== Auth =====
 async function checkAuth() {
-  const auth = sessionStorage.getItem("admin_auth");
-  const account = sessionStorage.getItem("admin_account");
-  const token = sessionStorage.getItem(SESSION_TOKEN_KEY);
+  const account = localStorage.getItem("admin_account");
+  const token = localStorage.getItem(SESSION_TOKEN_KEY);
 
-  if (auth === "true" && account && token) {
+  if (account && token) {
     loggingInModal.classList.remove("hidden");
     const startTime = Date.now();
     const active = await isSessionActive(account);
     if (active) {
-      // Session still active — auto-login
-      await recordActivity(account);
-      const elapsed = Date.now() - startTime;
-      if (elapsed < MIN_MODAL_DISPLAY_MS) {
-        await wait(MIN_MODAL_DISPLAY_MS - elapsed);
+      // Session still active — verify token matches, then auto-login
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(account)}&select=session_token`,
+        {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (data.length > 0 && data[0].session_token === token) {
+          await recordActivity(account);
+          const elapsed = Date.now() - startTime;
+          if (elapsed < MIN_MODAL_DISPLAY_MS) {
+            await wait(MIN_MODAL_DISPLAY_MS - elapsed);
+          }
+          loggingInModal.classList.add("hidden");
+          showDashboard(account);
+          return;
+        }
       }
-      loggingInModal.classList.add("hidden");
-      showDashboard(account);
-      return;
-    } else {
-      // Session expired — clear and show login
-      const elapsed = Date.now() - startTime;
-      if (elapsed < MIN_MODAL_DISPLAY_MS) {
-        await wait(MIN_MODAL_DISPLAY_MS - elapsed);
-      }
-      loggingInModal.classList.add("hidden");
-      clearSession();
     }
+    // Session expired or token mismatch — clear and show login
+    const elapsed = Date.now() - startTime;
+    if (elapsed < MIN_MODAL_DISPLAY_MS) {
+      await wait(MIN_MODAL_DISPLAY_MS - elapsed);
+    }
+    loggingInModal.classList.add("hidden");
+    clearSession();
   }
 }
 
@@ -189,12 +195,9 @@ async function attemptLogin() {
 
   // Create session — generate token, record activity
   const token = crypto.randomUUID();
-  sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+  localStorage.setItem(SESSION_TOKEN_KEY, token);
+  localStorage.setItem("admin_account", account.name);
   await recordActivity(account.name);
-
-  // Store session in sessionStorage
-  sessionStorage.setItem("admin_auth", "true");
-  sessionStorage.setItem("admin_account", account.name);
 
   const elapsed = Date.now() - startTime;
   if (elapsed < MIN_MODAL_DISPLAY_MS) {
@@ -224,9 +227,8 @@ async function logout() {
 }
 
 function clearSession() {
-  sessionStorage.removeItem("admin_auth");
-  sessionStorage.removeItem("admin_account");
-  sessionStorage.removeItem(SESSION_TOKEN_KEY);
+  localStorage.removeItem("admin_account");
+  localStorage.removeItem(SESSION_TOKEN_KEY);
 }
 
 function showDashboard(accountName) {
