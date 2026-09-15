@@ -744,6 +744,7 @@ body {
   font-size: 0.82rem;
   font-weight: 500;
   box-shadow: var(--neo-outset-sm);
+  overflow-y: auto;
 }
 
 .upload-status.success {
@@ -1218,6 +1219,10 @@ body {
   padding: 32px;
   max-width: 520px;
   width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   animation: slideUp 0.4s ease;
 }
 
@@ -1414,5 +1419,6 @@ body {
   .upload-modal-card {
     margin: 16px;
     padding: 24px;
+    max-height: 85vh;
   }
 }
