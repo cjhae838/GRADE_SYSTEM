@@ -448,10 +448,6 @@ body {
   color: var(--success);
 }
 
-.grade-number.warn {
-  color: var(--warning);
-}
-
 .grade-number.fail {
   color: var(--error);
 }
@@ -1202,10 +1198,6 @@ body {
 
 .admin-table .grade-cell.pass {
   color: var(--success);
-}
-
-.admin-table .grade-cell.warn {
-  color: var(--warning);
 }
 
 .admin-table .grade-cell.fail {

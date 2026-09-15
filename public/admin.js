@@ -362,6 +362,11 @@ async function uploadCSV() {
         continue;
       }
 
+      if (!/^\d{10}$/.test(studentNo)) {
+        validationErrors.push({ row: rowNum, reason: "Invalid student number \"" + studentNo + "\" (must be 10 digits)" });
+        continue;
+      }
+
       const studentName = row[headerIndex["STUDENT NAME"]]?.trim();
       if (!studentName) {
         validationErrors.push({ row: rowNum, reason: "Empty student name" });
@@ -873,8 +878,7 @@ function showLoading() {
 
 function getGradeClass(grade) {
   if (grade === null || grade === undefined) return "none";
-  if (grade >= 90) return "pass";
-  if (grade >= 75) return "warn";
+  if (grade >= 75) return "pass";
   return "fail";
 }
 

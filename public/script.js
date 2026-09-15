@@ -35,6 +35,13 @@ async function checkGrades() {
     return;
   }
 
+  if (!/^\d{10}$/.test(studentNumber)) {
+    showMessage("Student number must be exactly 10 digits.", "error");
+    hideResults();
+    setLoading(false);
+    return;
+  }
+
   setLoading(true);
 
   try {
@@ -152,8 +159,7 @@ function createTermColumn(termName, grade) {
   const isNone = grade === null;
   let gradeClass = "none";
   if (!isNone) {
-    if (grade >= 90) gradeClass = "pass";
-    else if (grade >= 75) gradeClass = "warn";
+    if (grade >= 75) gradeClass = "pass";
     else gradeClass = "fail";
   }
 
