@@ -26,11 +26,6 @@ const accounts = adminAccounts.split(",").map((a) => {
   return { name: name.trim(), password: password.trim() };
 });
 
-if (accounts.length < 1) {
-  console.error("ADMIN_ACCOUNTS must contain at least one account.");
-  process.exit(1);
-}
-
 const content = `const SUPABASE_URL = "${url}";
 const SUPABASE_ANON_KEY = "${anonKey}";
 const ADMIN_ACCOUNTS = ${JSON.stringify(accounts)};

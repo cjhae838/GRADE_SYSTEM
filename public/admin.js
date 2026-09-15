@@ -312,8 +312,6 @@ async function uploadCSV() {
 
     if (rows.length === 0) {
       showUploadStatus("CSV file is empty or has no valid rows.", "error");
-      uploadBtn.disabled = false;
-      resetUploadBtn();
       return;
     }
 
@@ -324,8 +322,6 @@ async function uploadCSV() {
 
     if (missingCols.length > 0) {
       showUploadStatus(`Missing columns: ${missingCols.join(", ")}. Found: ${headers.join(", ")}`, "error");
-      uploadBtn.disabled = false;
-      resetUploadBtn();
       return;
     }
 
@@ -399,19 +395,15 @@ async function uploadCSV() {
     if (gradeRows.length === 0 && validationErrors.length > 0) {
       const details = validationErrors.slice(0, 10).map((e) => `Row ${e.row}: ${e.reason}`).join("<br>");
       const more = validationErrors.length > 10 ? `<br>...and ${validationErrors.length - 10} more errors` : "";
-      showUploadStatusHtml(
+      showUploadStatus(
         `<strong>No valid rows found.</strong><br>${details}${more}`,
         "error"
       );
-      uploadBtn.disabled = false;
-      resetUploadBtn();
       return;
     }
 
     if (gradeRows.length === 0) {
       showUploadStatus("No valid rows found in CSV.", "error");
-      uploadBtn.disabled = false;
-      resetUploadBtn();
       return;
     }
 
@@ -460,7 +452,7 @@ async function uploadCSV() {
         `${r._studentNo} — ${r._studentName} (${r.subject_code} ${r.period})`
       ).join("<br>");
       const more = duplicateRows.length > 10 ? `<br>...and ${duplicateRows.length - 10} more duplicates` : "";
-      showUploadStatusHtml(
+      showUploadStatus(
         `<strong>All ${duplicateRows.length} rows are duplicates. No new data to upload.</strong><br><br>Duplicate entries:<br>${details}${more}`,
         "error"
       );
@@ -553,7 +545,7 @@ function buildUploadReport(inserted, duplicateRows, validationErrors, failedBatc
 
   const html = sections.join("");
   const hasErrors = failedBatches.length > 0 || validationErrors.length > 0;
-  showUploadStatusHtml(html, hasErrors ? "error" : "success");
+  showUploadStatus(html, hasErrors ? "error" : "success");
 }
 
 function resetUploadBtn() {
@@ -610,12 +602,7 @@ function normalizeHeader(h) {
   return h.toUpperCase().replace(/\s+/g, " ").trim();
 }
 
-function showUploadStatus(msg, type) {
-  uploadStatus.textContent = msg;
-  uploadStatus.className = `upload-status ${type}`;
-}
-
-function showUploadStatusHtml(html, type) {
+function showUploadStatus(html, type) {
   uploadStatus.innerHTML = html;
   uploadStatus.className = `upload-status ${type}`;
 }

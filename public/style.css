@@ -463,16 +463,6 @@ body {
   font-size: 1rem;
 }
 
-/* ===== Footer ===== */
-.footer {
-  text-align: center;
-  padding: 24px;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  bottom: 0;
-  position: sticky
-}
-
 /* ===== Animations ===== */
 @keyframes slideUp {
   from {
@@ -874,71 +864,6 @@ body {
 }
 
 /* ===== Admin Table ===== */
-.grades-table-wrapper {
-  margin-top: 16px;
-  overflow-x: auto;
-  border-radius: var(--radius);
-  box-shadow: var(--neo-inset);
-  padding: 4px;
-}
-
-.admin-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-}
-
-.admin-table thead {
-  background: var(--surface);
-}
-
-.admin-table th {
-  padding: 12px 14px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
-  text-align: left;
-  white-space: nowrap;
-}
-
-.admin-table td {
-  padding: 10px 14px;
-  color: var(--text);
-  border-top: 1px solid var(--shadow-dark);
-  border-top-color: rgba(163, 177, 198, 0.2);
-  white-space: nowrap;
-}
-
-.admin-table tbody tr:hover {
-  background: var(--surface-hover);
-}
-
-.admin-table .grade-cell {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-
-.admin-table .grade-cell.pass {
-  color: var(--success);
-}
-
-.admin-table .grade-cell.warn {
-  color: var(--warning);
-}
-
-.admin-table .grade-cell.fail {
-  color: var(--error);
-}
-
-.admin-table .grade-cell.none {
-  color: var(--none-color);
-  font-style: italic;
-  font-weight: 400;
-}
-
 /* ===== Admin Container ===== */
 .admin-container {
   max-width: 1100px;
@@ -1177,6 +1102,7 @@ body {
 
 /* ===== Grades Table Wrapper ===== */
 .grades-table-wrapper {
+  margin-top: 16px;
   background: var(--surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--neo-outset);

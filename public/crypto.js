@@ -10,11 +10,6 @@ const CryptoModule = (() => {
     return new TextEncoder().encode(str);
   }
 
-  // Convert ArrayBuffer to string
-  function bufToStr(buf) {
-    return new TextDecoder().decode(buf);
-  }
-
   // Convert ArrayBuffer to base64
   function bufToBase64(buf) {
     const bytes = new Uint8Array(buf);
@@ -78,7 +73,7 @@ const CryptoModule = (() => {
       key,
       ct
     );
-    return bufToStr(decrypted);
+    return new TextDecoder().decode(decrypted);
   }
 
   return { encrypt, decrypt };
