@@ -214,7 +214,7 @@ async function attemptLogin() {
 async function logout() {
   loggingOutModal.classList.remove("hidden");
   const startTime = Date.now();
-  const account = sessionStorage.getItem("admin_account");
+  const account = localStorage.getItem("admin_account");
   if (account) {
     await deleteSession(account);
   }
@@ -440,7 +440,7 @@ async function uploadCSV() {
     }
 
     // Record activity before upload
-    const account = sessionStorage.getItem("admin_account");
+    const account = localStorage.getItem("admin_account");
     if (account) await recordActivity(account);
 
     // Fetch existing grades to detect duplicates
@@ -759,7 +759,7 @@ async function deleteSection() {
 // Auto-load grades when section changes
 sectionFilter.addEventListener("change", async () => {
   if (sectionFilter.value) {
-    const account = sessionStorage.getItem("admin_account");
+    const account = localStorage.getItem("admin_account");
     if (account) await recordActivity(account);
     loadGrades();
   } else {
