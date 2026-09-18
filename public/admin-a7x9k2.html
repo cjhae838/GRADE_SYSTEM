@@ -78,6 +78,18 @@
     </div>
   </div>
 
+  <!-- Delete Grade Confirmation Modal -->
+  <div id="deleteGradeModal" class="modal-overlay hidden">
+    <div class="confirm-modal-card">
+      <h3 class="confirm-modal-title">Delete Grade Record</h3>
+      <p id="deleteGradeMsg" class="confirm-modal-msg"></p>
+      <div class="confirm-modal-actions">
+        <button id="deleteGradeCancelBtn" class="confirm-cancel-btn">Cancel</button>
+        <button id="deleteGradeConfirmBtn" class="confirm-delete-btn">Delete</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Logging In Modal -->
   <div id="loggingInModal" class="modal-overlay hidden">
     <div class="modal-card">
@@ -180,6 +192,7 @@
             <th class="col-grade">Prelim</th>
             <th class="col-grade">Midterm</th>
             <th class="col-grade">Final</th>
+            <th class="col-action">Actions</th>
           </tr>
         </thead>
         <tbody id="gradesTableBody">

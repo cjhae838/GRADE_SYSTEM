@@ -18,6 +18,10 @@ const gradesTable = document.getElementById("gradesTable");
 const gradesTableBody = document.getElementById("gradesTableBody");
 const gradesEmptyState = document.getElementById("gradesEmptyState");
 const gradesLoading = document.getElementById("gradesLoading");
+const deleteGradeModal = document.getElementById("deleteGradeModal");
+const deleteGradeMsg = document.getElementById("deleteGradeMsg");
+const deleteGradeCancelBtn = document.getElementById("deleteGradeCancelBtn");
+const deleteGradeConfirmBtn = document.getElementById("deleteGradeConfirmBtn");
 const loggingInModal = document.getElementById("loggingInModal");
 const loggingOutModal = document.getElementById("loggingOutModal");
 
@@ -798,6 +802,7 @@ async function loadGrades() {
     const decryptedRows = [];
     for (const row of data) {
       decryptedRows.push({
+        encrypted_student_no: row.student_no,
         student_no: await CryptoModule.decrypt(row.student_no),
         student_name: await CryptoModule.decrypt(row.student_name),
         subject_code: row.subject_code,
@@ -828,15 +833,16 @@ async function loadGrades() {
     const gradesMap = {};
     decryptedRows.forEach((row) => {
       const key = `${row.student_no}|${row.subject_code}`;
-      if (!gradesMap[key]) {
-        gradesMap[key] = {
-          student_no: row.student_no,
-          student_name: row.student_name,
-          subject_code: row.subject_code,
-          prelim: null,
-          midterm: null,
-          final: null,
-        };
+  if (!gradesMap[key]) {
+    gradesMap[key] = {
+      encrypted_student_no: row.encrypted_student_no,
+      student_no: row.student_no,
+      student_name: row.student_name,
+      subject_code: row.subject_code,
+      prelim: null,
+      midterm: null,
+      final: null,
+    };
       }
       if (row.period === "P") gradesMap[key].prelim = row.grade;
       else if (row.period === "M") gradesMap[key].midterm = row.grade;
@@ -862,6 +868,13 @@ async function loadGrades() {
         <td class="grade-cell ${getGradeClass(g.prelim)}">${g.prelim ?? "N/A"}</td>
         <td class="grade-cell ${getGradeClass(g.midterm)}">${g.midterm ?? "N/A"}</td>
         <td class="grade-cell ${getGradeClass(g.final)}">${g.final ?? "N/A"}</td>
+        <td class="col-action">
+          <button class="delete-grade-btn" onclick="deleteGrade('${escapeHtml(g.encrypted_student_no)}','${escapeHtml(g.student_no)}','${escapeHtml(g.subject_code)}')" title="Delete this subject record">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+          </button>
+        </td>
       `;
       gradesTableBody.appendChild(tr);
     });
@@ -878,6 +891,50 @@ async function loadGrades() {
     showEmptyState();
   }
 }
+
+// ===== Delete Grade Per Subject =====
+let pendingDelete = null;
+
+function deleteGrade(encryptedStudentNo, studentNo, subjectCode) {
+  const section = sectionFilter.value;
+  if (!section) return;
+  pendingDelete = { encryptedStudentNo, subjectCode, section };
+  deleteGradeMsg.textContent = `Delete all ${subjectCode} grade records for ${studentNo}?`;
+  deleteGradeModal.classList.remove("hidden");
+}
+
+deleteGradeCancelBtn.addEventListener("click", () => {
+  deleteGradeModal.classList.add("hidden");
+  pendingDelete = null;
+});
+
+deleteGradeConfirmBtn.addEventListener("click", async () => {
+  if (!pendingDelete) return;
+  const { encryptedStudentNo, subjectCode, section } = pendingDelete;
+  deleteGradeModal.classList.add("hidden");
+
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/grades?student_no=eq.${encodeURIComponent(encryptedStudentNo)}&subject_code=eq.${encodeURIComponent(subjectCode)}&section=eq.${encodeURIComponent(section)}`,
+      {
+        method: "DELETE",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+    if (!res.ok) {
+      console.error("Delete failed:", await res.text());
+      return;
+    }
+    await loadGrades();
+  } catch (err) {
+    console.error("Error deleting grade:", err);
+  } finally {
+    pendingDelete = null;
+  }
+});
 
 function showEmptyState() {
   gradesEmptyState.innerHTML = `
