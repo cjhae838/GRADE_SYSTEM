@@ -90,6 +90,33 @@
     </div>
   </div>
 
+  <!-- Add Section Modal -->
+  <div id="addSectionModal" class="modal-overlay hidden">
+    <div class="add-section-modal-card">
+      <div class="add-section-modal-header">
+        <h2>Add Section</h2>
+        <button class="modal-close-btn" onclick="closeAddSectionModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <input
+        type="text"
+        id="newSectionInput"
+        placeholder="Enter section name"
+        class="add-section-input"
+        maxlength="50"
+      >
+      <div id="addSectionStatus" class="upload-status hidden"></div>
+      <div class="add-section-modal-actions">
+        <button class="confirm-cancel-btn" onclick="closeAddSectionModal()">Cancel</button>
+        <button class="add-section-confirm-btn" onclick="addSection()">Add Section</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Logging In Modal -->
   <div id="loggingInModal" class="modal-overlay hidden">
     <div class="modal-card">
@@ -154,14 +181,7 @@
           <select id="sectionFilter" class="neo-select">
             <option value="">Select a section</option>
           </select>
-          <input
-            type="text"
-            id="newSectionInput"
-            placeholder="New section name"
-            class="neo-input-sm"
-            maxlength="50"
-          >
-          <button class="toolbar-action-btn" onclick="addSection()">Add</button>
+          <button class="add-section-btn" onclick="openAddSectionModal()">+ Add Section</button>
           <button class="toolbar-delete-btn" onclick="deleteSection()">Delete</button>
         </div>
       </div>

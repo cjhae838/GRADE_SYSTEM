@@ -1011,55 +1011,6 @@ body {
   min-width: 0;
 }
 
-.neo-input-sm {
-  padding: 10px 14px;
-  font-size: 0.82rem;
-  font-family: 'Inter', sans-serif;
-  font-weight: 500;
-  color: var(--text);
-  background: var(--surface);
-  border: none;
-  border-radius: var(--radius-sm);
-  box-shadow: var(--neo-inset);
-  outline: none;
-  transition: var(--transition);
-  width: 160px;
-  flex-shrink: 0;
-}
-
-.neo-input-sm:focus {
-  box-shadow: var(--neo-inset), 0 0 0 2px var(--primary);
-}
-
-.neo-input-sm::placeholder {
-  color: var(--text-muted);
-}
-
-.toolbar-action-btn {
-  display: inline-flex;
-  align-items: center;
-  padding: 10px 18px;
-  font-size: 0.82rem;
-  font-family: 'Inter', sans-serif;
-  font-weight: 600;
-  color: #fff;
-  background: var(--primary);
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: var(--transition);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.toolbar-action-btn:hover {
-  background: #1d4ed8;
-}
-
-.toolbar-action-btn:active {
-  box-shadow: var(--neo-inset-sm);
-}
-
 .toolbar-delete-btn {
   display: inline-flex;
   align-items: center;
@@ -1084,6 +1035,33 @@ body {
 }
 
 .toolbar-delete-btn:active {
+  box-shadow: var(--neo-inset-sm);
+}
+
+.add-section-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 18px;
+  font-size: 0.82rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  box-shadow: var(--neo-outset-sm);
+  flex-shrink: 0;
+}
+
+.add-section-btn:hover {
+  color: var(--primary);
+  background: var(--surface-hover);
+}
+
+.add-section-btn:active {
   box-shadow: var(--neo-inset-sm);
 }
 
@@ -1317,6 +1295,82 @@ body {
   box-shadow: var(--neo-inset-sm);
 }
 
+/* ===== Add Section Modal ===== */
+.add-section-modal-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--neo-outset);
+  padding: 32px;
+  max-width: 400px;
+  width: 100%;
+  animation: slideUp 0.4s ease;
+}
+
+.add-section-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.add-section-modal-header h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.add-section-input {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 0.88rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--neo-inset);
+  outline: none;
+  transition: var(--transition);
+  box-sizing: border-box;
+}
+
+.add-section-input:focus {
+  box-shadow: var(--neo-inset), 0 0 0 2px var(--primary);
+}
+
+.add-section-input::placeholder {
+  color: var(--text-muted);
+}
+
+.add-section-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.add-section-confirm-btn {
+  padding: 10px 22px;
+  font-size: 0.82rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  color: #fff;
+  background: var(--primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.add-section-confirm-btn:hover {
+  background: #1d4ed8;
+}
+
+.add-section-confirm-btn:active {
+  box-shadow: var(--neo-inset-sm);
+}
+
 /* ===== Upload Modal ===== */
 .upload-modal-card {
   background: var(--surface);
@@ -1511,12 +1565,7 @@ body {
     min-width: 100%;
   }
 
-  .neo-input-sm {
-    flex: 1;
-    min-width: 120px;
-  }
-
-  .toolbar-action-btn,
+  .add-section-btn,
   .toolbar-delete-btn {
     flex: 1;
     justify-content: center;

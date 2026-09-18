@@ -22,6 +22,9 @@ const deleteGradeModal = document.getElementById("deleteGradeModal");
 const deleteGradeMsg = document.getElementById("deleteGradeMsg");
 const deleteGradeCancelBtn = document.getElementById("deleteGradeCancelBtn");
 const deleteGradeConfirmBtn = document.getElementById("deleteGradeConfirmBtn");
+const addSectionModal = document.getElementById("addSectionModal");
+const newSectionInput = document.getElementById("newSectionInput");
+const addSectionStatus = document.getElementById("addSectionStatus");
 const loggingInModal = document.getElementById("loggingInModal");
 const loggingOutModal = document.getElementById("loggingOutModal");
 
@@ -272,8 +275,13 @@ uploadModal.addEventListener("click", (e) => {
 
 // Close modal on Escape key
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !uploadModal.classList.contains("hidden")) {
-    closeUploadModal();
+  if (e.key === "Escape") {
+    if (!uploadModal.classList.contains("hidden")) closeUploadModal();
+    else if (!addSectionModal.classList.contains("hidden")) closeAddSectionModal();
+    else if (!deleteGradeModal.classList.contains("hidden")) {
+      deleteGradeModal.classList.add("hidden");
+      pendingDelete = null;
+    }
   }
 });
 
@@ -680,10 +688,10 @@ async function loadSections() {
 }
 
 async function addSection() {
-  const input = document.getElementById("newSectionInput");
-  const name = input.value.trim();
+  const name = newSectionInput.value.trim();
   if (!name) {
-    showUploadStatus("Please enter a section name", "error");
+    addSectionStatus.innerHTML = "Please enter a section name";
+    addSectionStatus.className = "upload-status error";
     return;
   }
 
@@ -702,21 +710,22 @@ async function addSection() {
     if (!response.ok) {
       const err = await response.text();
       if (err.includes("duplicate") || err.includes("unique")) {
-        showUploadStatus("Section \"" + name + "\" already exists", "error");
+        addSectionStatus.innerHTML = "Section \"" + name + "\" already exists";
       } else {
-        showUploadStatus("Failed to add section: " + err, "error");
+        addSectionStatus.innerHTML = "Failed to add section";
       }
+      addSectionStatus.className = "upload-status error";
       return;
     }
 
-    input.value = "";
-    showUploadStatus("Section \"" + name + "\" added", "success");
     await loadSections();
     sectionFilter.value = name;
     sectionFilter.dispatchEvent(new Event("change"));
+    closeAddSectionModal();
   } catch (err) {
     console.error("Error adding section:", err);
-    showUploadStatus("Error adding section", "error");
+    addSectionStatus.innerHTML = "Error adding section";
+    addSectionStatus.className = "upload-status error";
   }
 }
 
@@ -934,6 +943,28 @@ deleteGradeConfirmBtn.addEventListener("click", async () => {
   } finally {
     pendingDelete = null;
   }
+});
+
+// ===== Add Section Modal =====
+function openAddSectionModal() {
+  newSectionInput.value = "";
+  addSectionStatus.classList.add("hidden");
+  addSectionModal.classList.remove("hidden");
+  setTimeout(() => newSectionInput.focus(), 100);
+}
+
+function closeAddSectionModal() {
+  addSectionModal.classList.add("hidden");
+  newSectionInput.value = "";
+  addSectionStatus.classList.add("hidden");
+}
+
+addSectionModal.addEventListener("click", (e) => {
+  if (e.target === addSectionModal) closeAddSectionModal();
+});
+
+newSectionInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") addSection();
 });
 
 function showEmptyState() {
