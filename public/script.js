@@ -14,7 +14,6 @@ const studentNumberInput = document.getElementById("studentNumber");
 const checkBtn = document.getElementById("checkBtn");
 const resultsSection = document.getElementById("resultsSection");
 const messageArea = document.getElementById("messageArea");
-const studentNameEl = document.getElementById("studentName");
 const studentNoEl = document.getElementById("studentNo");
 const gradesBody = document.getElementById("gradesBody");
 
@@ -127,7 +126,6 @@ function transformGrades(rows) {
 
 // Display student results
 function displayResults(student, studentNumber) {
-  studentNameEl.textContent = student.name;
   studentNoEl.textContent = studentNumber;
 
   gradesBody.innerHTML = "";
