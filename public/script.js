@@ -47,7 +47,7 @@ async function checkGrades() {
     // Encrypt student number for query
     const encryptedStudentNo = await CryptoModule.encrypt(studentNumber);
 
-    const url = `${SUPABASE_URL}/rest/v1/grades?student_no=eq.${encodeURIComponent(encryptedStudentNo)}&select=period,subject_code,section,student_name,grade`;
+    const url = `${SUPABASE_URL}/rest/v1/grades?student_no=eq.${encodeURIComponent(encryptedStudentNo)}&select=period,subject_code,section,student_name,grade,exam_score,lab_pct,qar`;
     const response = await fetch(url, {
       headers: {
         apikey: SUPABASE_ANON_KEY,
@@ -107,15 +107,28 @@ function transformGrades(rows) {
     if (!subjectsMap[key]) {
       subjectsMap[key] = {
         name: row.subject_code,
-        prelim: null,
-        midterm: null,
-        final: null,
+        prelim: null, prelim_exam: null, prelim_lab: null, prelim_qar: null,
+        midterm: null, midterm_exam: null, midterm_lab: null, midterm_qar: null,
+        final: null, final_exam: null, final_lab: null, final_qar: null,
       };
     }
 
-    if (row.period === "P") subjectsMap[key].prelim = row.grade;
-    else if (row.period === "M") subjectsMap[key].midterm = row.grade;
-    else if (row.period === "F") subjectsMap[key].final = row.grade;
+    if (row.period === "P") {
+      subjectsMap[key].prelim = row.grade;
+      subjectsMap[key].prelim_exam = row.exam_score;
+      subjectsMap[key].prelim_lab = row.lab_pct;
+      subjectsMap[key].prelim_qar = row.qar;
+    } else if (row.period === "M") {
+      subjectsMap[key].midterm = row.grade;
+      subjectsMap[key].midterm_exam = row.exam_score;
+      subjectsMap[key].midterm_lab = row.lab_pct;
+      subjectsMap[key].midterm_qar = row.qar;
+    } else if (row.period === "F") {
+      subjectsMap[key].final = row.grade;
+      subjectsMap[key].final_exam = row.exam_score;
+      subjectsMap[key].final_lab = row.lab_pct;
+      subjectsMap[key].final_qar = row.qar;
+    }
   });
 
   return {
@@ -139,9 +152,9 @@ function displayResults(student, studentNumber) {
         <h4 class="subject-name">${subject.name}</h4>
       </div>
       <div class="terms-grid">
-        ${createTermColumn("Prelim", subject.prelim)}
-        ${createTermColumn("Midterm", subject.midterm)}
-        ${createTermColumn("Final", subject.final)}
+        ${createTermColumn("Prelim", subject.prelim, subject.prelim_exam, subject.prelim_lab, subject.prelim_qar)}
+        ${createTermColumn("Midterm", subject.midterm, subject.midterm_exam, subject.midterm_lab, subject.midterm_qar)}
+        ${createTermColumn("Final", subject.final, subject.final_exam, subject.final_lab, subject.final_qar)}
       </div>
     `;
 
@@ -153,7 +166,7 @@ function displayResults(student, studentNumber) {
 }
 
 // Create a term column
-function createTermColumn(termName, grade) {
+function createTermColumn(termName, grade, exam, lab, qar) {
   const isNone = grade === null;
   let gradeClass = "none";
   if (!isNone) {
@@ -161,10 +174,20 @@ function createTermColumn(termName, grade) {
     else gradeClass = "fail";
   }
 
+  const hasBreakdown = exam != null || lab != null || qar != null;
+  const breakdown = hasBreakdown
+    ? `<div class="grade-breakdown">
+        ${exam != null ? `<span>Exam: ${exam}</span>` : ""}
+        ${lab != null ? `<span>Lab: ${lab}</span>` : ""}
+        ${qar != null ? `<span>QAR: ${qar}</span>` : ""}
+       </div>`
+    : "";
+
   return `
     <div class="term-column">
       <div class="term-label">${termName}</div>
       <div class="grade-number ${gradeClass}">${isNone ? "N/A" : grade}</div>
+      ${breakdown}
     </div>
   `;
 }

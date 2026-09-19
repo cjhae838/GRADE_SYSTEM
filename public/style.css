@@ -425,6 +425,15 @@ body {
   opacity: 0.25;
 }
 
+.grade-breakdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
 .term-label {
   font-size: 0.65rem;
   font-weight: 700;
@@ -1187,6 +1196,19 @@ body {
   color: var(--none-color);
   font-style: italic;
   font-weight: 400;
+}
+
+.grade-main {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.grade-detail {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
 }
 
 /* ===== Delete Grade Button ===== */

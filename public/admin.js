@@ -350,7 +350,7 @@ async function uploadCSV() {
       return;
     }
 
-    const requiredCols = ["P/M/F", "SUBJECT", "SECTION", "STUDENT NO.", "STUDENT NAME", "PRELIM"];
+    const requiredCols = ["P/M/F", "SUBJECT", "SECTION", "STUDENT NO.", "STUDENT NAME"];
     const normalizedHeaders = headers.map(normalizeHeader);
     const normalizedRequired = requiredCols.map(normalizeHeader);
     const missingCols = normalizedRequired.filter((col) => !normalizedHeaders.includes(col));
@@ -364,6 +364,9 @@ async function uploadCSV() {
     headers.forEach((h, i) => {
       headerIndex[normalizeHeader(h)] = i;
     });
+
+    // Map period to its grade column name
+    const periodGradeCol = { P: "PRELIM", M: "MIDTERM", F: "FINAL" };
 
     // Parse CSV rows — track validation details
     const gradeRows = [];
@@ -408,13 +411,25 @@ async function uploadCSV() {
         continue;
       }
 
-      const gradeVal = row[headerIndex["PRELIM"]]?.trim();
+      // Dynamic grade column based on period
+      const gradeColName = periodGradeCol[period];
+      const gradeVal = row[headerIndex[gradeColName]]?.trim();
       const grade = parseFloat(gradeVal);
       if (isNaN(grade)) {
         const gradeDisplay = gradeVal || "(empty)";
         validationErrors.push({ row: rowNum, reason: "Invalid grade \"" + gradeDisplay + "\"" });
         continue;
       }
+
+      // Parse EXAM Score, LAB %, QAR (optional)
+      const examScoreVal = row[headerIndex["EXAM SCORE"]]?.trim();
+      const examScore = examScoreVal ? parseFloat(examScoreVal) : null;
+
+      const labPctVal = row[headerIndex["LAB %"]]?.trim();
+      const labPct = labPctVal ? parseFloat(labPctVal) : null;
+
+      const qarVal = row[headerIndex["QAR"]]?.trim();
+      const qar = qarVal ? parseFloat(qarVal) : null;
 
       const encryptedStudentNo = await CryptoModule.encrypt(studentNo);
       const encryptedStudentName = await CryptoModule.encrypt(studentName);
@@ -426,6 +441,9 @@ async function uploadCSV() {
         student_no: encryptedStudentNo,
         student_name: encryptedStudentName,
         grade,
+        exam_score: examScore,
+        lab_pct: labPct,
+        qar: qar,
         _studentNo: studentNo,
         _studentName: studentName,
         _subjectCode: subjectCode,
@@ -789,7 +807,7 @@ async function loadGrades() {
 
   try {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/grades?section=eq.${encodeURIComponent(section)}&select=period,subject_code,student_no,student_name,grade&order=student_name,subject_code`,
+      `${SUPABASE_URL}/rest/v1/grades?section=eq.${encodeURIComponent(section)}&select=period,subject_code,student_no,student_name,grade,exam_score,lab_pct,qar&order=student_name,subject_code`,
       {
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -817,6 +835,9 @@ async function loadGrades() {
         subject_code: row.subject_code,
         period: row.period,
         grade: row.grade,
+        exam_score: row.exam_score,
+        lab_pct: row.lab_pct,
+        qar: row.qar,
       });
     }
 
@@ -848,14 +869,27 @@ async function loadGrades() {
       student_no: row.student_no,
       student_name: row.student_name,
       subject_code: row.subject_code,
-      prelim: null,
-      midterm: null,
-      final: null,
+      prelim: null, prelim_exam: null, prelim_lab: null, prelim_qar: null,
+      midterm: null, midterm_exam: null, midterm_lab: null, midterm_qar: null,
+      final: null, final_exam: null, final_lab: null, final_qar: null,
     };
       }
-      if (row.period === "P") gradesMap[key].prelim = row.grade;
-      else if (row.period === "M") gradesMap[key].midterm = row.grade;
-      else if (row.period === "F") gradesMap[key].final = row.grade;
+      if (row.period === "P") {
+        gradesMap[key].prelim = row.grade;
+        gradesMap[key].prelim_exam = row.exam_score;
+        gradesMap[key].prelim_lab = row.lab_pct;
+        gradesMap[key].prelim_qar = row.qar;
+      } else if (row.period === "M") {
+        gradesMap[key].midterm = row.grade;
+        gradesMap[key].midterm_exam = row.exam_score;
+        gradesMap[key].midterm_lab = row.lab_pct;
+        gradesMap[key].midterm_qar = row.qar;
+      } else if (row.period === "F") {
+        gradesMap[key].final = row.grade;
+        gradesMap[key].final_exam = row.exam_score;
+        gradesMap[key].final_lab = row.lab_pct;
+        gradesMap[key].final_qar = row.qar;
+      }
     });
 
     // Render grouped table
@@ -874,9 +908,18 @@ async function loadGrades() {
         <td>${isNewStudent ? escapeHtml(g.student_no) : ""}</td>
         <td>${isNewStudent ? escapeHtml(g.student_name) : ""}</td>
         <td>${escapeHtml(g.subject_code)}</td>
-        <td class="grade-cell ${getGradeClass(g.prelim)}">${g.prelim ?? "N/A"}</td>
-        <td class="grade-cell ${getGradeClass(g.midterm)}">${g.midterm ?? "N/A"}</td>
-        <td class="grade-cell ${getGradeClass(g.final)}">${g.final ?? "N/A"}</td>
+        <td class="grade-cell ${getGradeClass(g.prelim)}">
+          <div class="grade-main">${g.prelim ?? "N/A"}</div>
+          ${g.prelim_exam != null || g.prelim_lab != null || g.prelim_qar != null ? `<div class="grade-detail">E:${g.prelim_exam ?? "-"} L:${g.prelim_lab ?? "-"} Q:${g.prelim_qar ?? "-"}</div>` : ""}
+        </td>
+        <td class="grade-cell ${getGradeClass(g.midterm)}">
+          <div class="grade-main">${g.midterm ?? "N/A"}</div>
+          ${g.midterm_exam != null || g.midterm_lab != null || g.midterm_qar != null ? `<div class="grade-detail">E:${g.midterm_exam ?? "-"} L:${g.midterm_lab ?? "-"} Q:${g.midterm_qar ?? "-"}</div>` : ""}
+        </td>
+        <td class="grade-cell ${getGradeClass(g.final)}">
+          <div class="grade-main">${g.final ?? "N/A"}</div>
+          ${g.final_exam != null || g.final_lab != null || g.final_qar != null ? `<div class="grade-detail">E:${g.final_exam ?? "-"} L:${g.final_lab ?? "-"} Q:${g.final_qar ?? "-"}</div>` : ""}
+        </td>
         <td class="col-action">
           <button class="delete-grade-btn" onclick="deleteGrade('${escapeHtml(g.encrypted_student_no)}','${escapeHtml(g.student_no)}','${escapeHtml(g.subject_code)}')" title="Delete this subject record">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
