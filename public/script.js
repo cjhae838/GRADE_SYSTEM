@@ -174,20 +174,16 @@ function createTermColumn(termName, grade, exam, lab, qar) {
     else gradeClass = "fail";
   }
 
-  const hasBreakdown = exam != null || lab != null || qar != null;
-  const breakdown = hasBreakdown
-    ? `<div class="grade-breakdown">
-        ${exam != null ? `<span>Exam: ${exam}</span>` : ""}
-        ${lab != null ? `<span>Lab: ${lab === 0 ? "N/A" : lab}</span>` : ""}
-        ${qar != null ? `<span>QAR: ${qar}</span>` : ""}
-       </div>`
-    : "";
+  const subItems = [];
+  if (qar != null) subItems.push(`<div class="term-sub"><span>QAR</span><span>${qar}</span></div>`);
+  if (lab != null) subItems.push(`<div class="term-sub"><span>Lab</span><span>${lab === 0 ? "N/A" : lab}</span></div>`);
+  if (exam != null) subItems.push(`<div class="term-sub"><span>Exam</span><span>${exam}</span></div>`);
 
   return `
     <div class="term-column">
       <div class="term-label">${termName}</div>
+      ${subItems.join("")}
       <div class="grade-number ${gradeClass}">${isNone ? "N/A" : grade}</div>
-      ${breakdown}
     </div>
   `;
 }

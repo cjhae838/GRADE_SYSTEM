@@ -425,13 +425,20 @@ body {
   opacity: 0.25;
 }
 
-.grade-breakdown {
+.term-sub {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
   font-size: 0.7rem;
   color: var(--text-muted);
+}
+
+.term-sub span:first-child {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
 }
 
 .term-label {
@@ -1500,8 +1507,10 @@ body {
 
   .term-column {
     flex-direction: row;
+    align-items: flex-start;
     justify-content: space-between;
     padding: 14px 16px;
+    gap: 8px;
   }
 
   .term-column:not(:last-child)::after {
@@ -1513,14 +1522,18 @@ body {
     height: 1px;
   }
 
-  .term-column .grade-number {
-    order: 2;
-    font-size: 1.6rem;
+  .term-label {
+    flex-shrink: 0;
   }
 
-  .term-column .grade-breakdown {
-    order: 1;
-    text-align: right;
+  .term-sub {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .grade-number {
+    flex-shrink: 0;
+    font-size: 1.6rem;
   }
 
   .modal-card {
