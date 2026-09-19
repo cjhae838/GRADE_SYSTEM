@@ -178,7 +178,7 @@ function createTermColumn(termName, grade, exam, lab, qar) {
   const breakdown = hasBreakdown
     ? `<div class="grade-breakdown">
         ${exam != null ? `<span>Exam: ${exam}</span>` : ""}
-        ${lab != null ? `<span>Lab: ${lab}</span>` : ""}
+        ${lab != null ? `<span>Lab: ${lab === 0 ? "N/A" : lab}</span>` : ""}
         ${qar != null ? `<span>QAR: ${qar}</span>` : ""}
        </div>`
     : "";

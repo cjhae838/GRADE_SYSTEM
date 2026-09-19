@@ -910,15 +910,15 @@ async function loadGrades() {
         <td>${escapeHtml(g.subject_code)}</td>
         <td class="grade-cell ${getGradeClass(g.prelim)}">
           <div class="grade-main">${g.prelim ?? "N/A"}</div>
-          ${g.prelim_exam != null || g.prelim_lab != null || g.prelim_qar != null ? `<div class="grade-detail">E:${g.prelim_exam ?? "-"} L:${g.prelim_lab ?? "-"} Q:${g.prelim_qar ?? "-"}</div>` : ""}
+          ${g.prelim_exam != null || g.prelim_lab != null || g.prelim_qar != null ? `<div class="grade-detail">E:${g.prelim_exam ?? "-"} L:${g.prelim_lab != null ? (g.prelim_lab === 0 ? "N/A" : g.prelim_lab) : "-"} Q:${g.prelim_qar ?? "-"}</div>` : ""}
         </td>
         <td class="grade-cell ${getGradeClass(g.midterm)}">
           <div class="grade-main">${g.midterm ?? "N/A"}</div>
-          ${g.midterm_exam != null || g.midterm_lab != null || g.midterm_qar != null ? `<div class="grade-detail">E:${g.midterm_exam ?? "-"} L:${g.midterm_lab ?? "-"} Q:${g.midterm_qar ?? "-"}</div>` : ""}
+          ${g.midterm_exam != null || g.midterm_lab != null || g.midterm_qar != null ? `<div class="grade-detail">E:${g.midterm_exam ?? "-"} L:${g.midterm_lab != null ? (g.midterm_lab === 0 ? "N/A" : g.midterm_lab) : "-"} Q:${g.midterm_qar ?? "-"}</div>` : ""}
         </td>
         <td class="grade-cell ${getGradeClass(g.final)}">
           <div class="grade-main">${g.final ?? "N/A"}</div>
-          ${g.final_exam != null || g.final_lab != null || g.final_qar != null ? `<div class="grade-detail">E:${g.final_exam ?? "-"} L:${g.final_lab ?? "-"} Q:${g.final_qar ?? "-"}</div>` : ""}
+          ${g.final_exam != null || g.final_lab != null || g.final_qar != null ? `<div class="grade-detail">E:${g.final_exam ?? "-"} L:${g.final_lab != null ? (g.final_lab === 0 ? "N/A" : g.final_lab) : "-"} Q:${g.final_qar ?? "-"}</div>` : ""}
         </td>
         <td class="col-action">
           <button class="delete-grade-btn" onclick="deleteGrade('${escapeHtml(g.encrypted_student_no)}','${escapeHtml(g.student_no)}','${escapeHtml(g.subject_code)}')" title="Delete this subject record">
