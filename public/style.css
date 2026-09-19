@@ -1513,8 +1513,14 @@ body {
     height: 1px;
   }
 
-  .grade-number {
-    font-size: 1.2rem;
+  .term-column .grade-number {
+    order: 2;
+    font-size: 1.6rem;
+  }
+
+  .term-column .grade-breakdown {
+    order: 1;
+    text-align: right;
   }
 
   .modal-card {
