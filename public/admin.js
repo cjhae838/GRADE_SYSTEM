@@ -150,7 +150,7 @@ async function checkAuth() {
             await wait(MIN_MODAL_DISPLAY_MS - elapsed);
           }
           loggingInModal.classList.add("hidden");
-          window.location.href = "chooser.html";
+          showDashboard(account);
           return;
         }
       }
