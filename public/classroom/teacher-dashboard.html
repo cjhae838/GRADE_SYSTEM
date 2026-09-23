@@ -34,7 +34,7 @@
           </svg>
           Back
         </button>
-        <button class="btn btn-danger" onclick="handleLogout()">
+        <button class="btn btn-danger" onclick="logout()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
             <polyline points="16 17 21 12 16 7"/>
@@ -95,6 +95,9 @@
 
   <script src="classroom.js"></script>
   <script>
+    // Auth check
+    if (!requireAuth()) throw new Error("Not authenticated");
+
     function openAddPresentation() {
       alert("Add presentation form — coming in Milestone 3");
     }
@@ -105,13 +108,6 @@
 
     function endSession() {
       alert("End session — coming in Milestone 7");
-    }
-
-    function handleLogout() {
-      sessionStorage.removeItem("admin_account");
-      localStorage.removeItem("admin_account");
-      localStorage.removeItem("admin_session_token");
-      window.location.href = "../admin-a7x9k2.html";
     }
   </script>
 </body>
