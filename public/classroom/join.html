@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join Presentation</title>
+  <link rel="stylesheet" href="classroom.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="join-container">
+    <div class="join-card">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;color:var(--primary);margin-bottom:16px;">
+        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+        <line x1="8" y1="21" x2="16" y2="21"/>
+        <line x1="12" y1="17" x2="12" y2="21"/>
+      </svg>
+      <h1>Classroom Presentation</h1>
+      <p class="subtitle">Enter the room code to join</p>
+      <input
+        type="text"
+        id="roomCodeInput"
+        class="join-input"
+        placeholder="Room code"
+        maxlength="10"
+        autocomplete="off"
+        autofocus
+      >
+      <button class="join-btn" onclick="joinRoom()">Join</button>
+      <p id="joinError" class="join-error hidden"></p>
+    </div>
+  </div>
+
+  <script>
+    const roomCodeInput = document.getElementById("roomCodeInput");
+    const joinError = document.getElementById("joinError");
+
+    function joinRoom() {
+      const code = roomCodeInput.value.trim().toUpperCase();
+      if (!code) {
+        showError("Please enter a room code.");
+        return;
+      }
+      // Placeholder — validation comes in Milestone 8
+      alert("Join room \"" + code + "\" — coming in Milestone 8");
+    }
+
+    function showError(msg) {
+      joinError.textContent = msg;
+      joinError.classList.remove("hidden");
+    }
+
+    roomCodeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") joinRoom();
+    });
+
+    // Auto-uppercase input
+    roomCodeInput.addEventListener("input", () => {
+      roomCodeInput.value = roomCodeInput.value.toUpperCase();
+    });
+  </script>
+</body>
+</html>

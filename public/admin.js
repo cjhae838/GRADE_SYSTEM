@@ -27,6 +27,8 @@ const newSectionInput = document.getElementById("newSectionInput");
 const addSectionStatus = document.getElementById("addSectionStatus");
 const loggingInModal = document.getElementById("loggingInModal");
 const loggingOutModal = document.getElementById("loggingOutModal");
+const choiceScreen = document.getElementById("choiceScreen");
+const choiceAccountBadge = document.getElementById("choiceAccountBadge");
 
 const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 const MIN_MODAL_DISPLAY_MS = 2000; // 2 seconds minimum display time
@@ -150,7 +152,8 @@ async function checkAuth() {
             await wait(MIN_MODAL_DISPLAY_MS - elapsed);
           }
           loggingInModal.classList.add("hidden");
-          showDashboard(account);
+          choiceScreen.classList.remove("hidden");
+          choiceAccountBadge.textContent = account;
           return;
         }
       }
@@ -211,7 +214,8 @@ async function attemptLogin() {
     await wait(MIN_MODAL_DISPLAY_MS - elapsed);
   }
   loggingInModal.classList.add("hidden");
-  showDashboard(account.name);
+  choiceScreen.classList.remove("hidden");
+  choiceAccountBadge.textContent = account.name;
 }
 
 async function logout() {
@@ -229,6 +233,7 @@ async function logout() {
   loggingOutModal.classList.add("hidden");
   passwordModal.classList.remove("hidden");
   adminDashboard.classList.add("hidden");
+  choiceScreen.classList.add("hidden");
   passwordInput.value = "";
   hideError();
 }
@@ -238,11 +243,17 @@ function clearSession() {
   localStorage.removeItem(SESSION_TOKEN_KEY);
 }
 
-function showDashboard(accountName) {
+function showGradesDashboard(accountName) {
   passwordModal.classList.add("hidden");
+  choiceScreen.classList.add("hidden");
   adminDashboard.classList.remove("hidden");
   accountBadge.textContent = accountName;
   loadSections();
+}
+
+function navigateToPresentations() {
+  sessionStorage.setItem("admin_account", localStorage.getItem("admin_account"));
+  window.location.href = "classroom/teacher-dashboard.html";
 }
 
 passwordInput.addEventListener("keydown", (e) => {
