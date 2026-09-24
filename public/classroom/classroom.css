@@ -256,6 +256,11 @@ body {
   color: var(--primary);
   margin: 16px 0;
 }
+.session-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
 
 .session-label {
   font-size: 0.8rem;
@@ -347,6 +352,10 @@ body {
   margin-top: 16px;
   font-size: 0.85rem;
   color: var(--error);
+}
+
+.hidden {
+  display: none;
 }
 
 /* ===== Presentation Viewer ===== */

@@ -3,6 +3,7 @@
 
 let presentations = [];
 let pendingDeleteId = null;
+let activeSession = null;
 
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({
@@ -91,6 +92,108 @@ async function deletePresentation(p) {
     headers: teacherHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to delete presentation (${res.status})`);
+}
+
+// ===== Sessions =====
+
+const ROOM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function generateRoomCode() {
+  const bytes = new Uint8Array(5);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => ROOM_CODE_ALPHABET[b % ROOM_CODE_ALPHABET.length]).join("");
+}
+
+function renderSession() {
+  const startBtn = document.getElementById("startSessionBtn");
+  const panel = document.getElementById("activeSession");
+  if (activeSession) {
+    document.getElementById("roomCode").textContent = activeSession.room_code;
+    panel.classList.remove("hidden");
+    startBtn.classList.add("hidden");
+  } else {
+    panel.classList.add("hidden");
+    startBtn.classList.remove("hidden");
+  }
+}
+
+async function loadActiveSession() {
+  const teacher = encodeURIComponent(getTeacherAccount());
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/sessions?teacher_id=eq.${teacher}&status=eq.active&limit=1&order=created_at.desc`,
+    { headers: teacherHeaders() }
+  );
+  if (!res.ok) throw new Error(`Failed to load session (${res.status})`);
+  const rows = await res.json();
+  activeSession = rows[0] || null;
+  renderSession();
+}
+
+async function createSession() {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const room_code = generateRoomCode();
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/sessions`, {
+      method: "POST",
+      headers: teacherHeaders({
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      }),
+      body: JSON.stringify({
+        teacher_id: getTeacherAccount(),
+        room_code,
+        status: "active",
+        current_presentation_id: null,
+      }),
+    });
+    if (res.status === 409) continue; // room code collision, try again
+    if (!res.ok) throw new Error(`Failed to start session (${res.status})`);
+    const rows = await res.json();
+    activeSession = rows[0];
+    renderSession();
+    return;
+  }
+  throw new Error("Could not generate a unique room code");
+}
+
+async function startSession() {
+  const btn = document.getElementById("startSessionBtn");
+  btn.disabled = true;
+  try {
+    await createSession();
+  } catch (err) {
+    console.error("Start session failed:", err);
+    alert("Could not start a session — try again."); // ponytail: native alert, polish later
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function endSession() {
+  if (!activeSession) return;
+  const btn = document.querySelector("#activeSession .btn-danger");
+  btn.disabled = true;
+  const teacher = encodeURIComponent(getTeacherAccount());
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/sessions?id=eq.${activeSession.id}&teacher_id=eq.${teacher}`,
+      {
+        method: "PATCH",
+        headers: teacherHeaders({
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        }),
+        body: JSON.stringify({ status: "ended", ended_at: new Date().toISOString() }),
+      }
+    );
+    if (!res.ok) throw new Error(`Failed to end session (${res.status})`);
+    activeSession = null;
+    renderSession();
+  } catch (err) {
+    console.error("End session failed:", err);
+    alert("Could not end the session — try again.");
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ===== Rendering =====

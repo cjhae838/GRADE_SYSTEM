@@ -35,3 +35,19 @@ function teacherHeaders(extra = {}) {
     ...extra,
   };
 }
+
+// Student-facing: returns the active session for a room code, or null.
+async function activeSessionByCode(code) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_active_session`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ code }),
+  });
+  if (!res.ok) throw new Error(`get_active_session failed (${res.status})`);
+  const rows = await res.json();
+  return Array.isArray(rows) && rows.length ? rows[0] : null;
+}

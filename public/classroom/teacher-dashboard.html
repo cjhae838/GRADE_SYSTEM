@@ -57,6 +57,7 @@
       <div id="activeSession" class="session-info hidden">
         <div class="session-label">Room Code</div>
         <div id="roomCode" class="room-code">------</div>
+        <p class="session-hint">Students can join using this code</p>
         <div class="session-label">Students Connected: <span id="studentCount">0</span></div>
         <button class="btn btn-danger" onclick="endSession()" style="margin-top: 20px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -145,19 +146,12 @@
           document.getElementById("presentationList").innerHTML =
             '<div class="empty-state"><p>Could not load presentations</p><p class="hint">Check the Supabase connection and refresh.</p></div>';
         });
+      loadActiveSession().catch((err) => console.error("Failed to load session:", err));
     })();
 
     document.getElementById("addPresentationCancelBtn").addEventListener("click", closeAddPresentationModal);
     document.getElementById("deletePresentationCancelBtn").addEventListener("click", closeDeletePresentationModal);
     document.getElementById("deletePresentationConfirmBtn").addEventListener("click", confirmDeletePresentation);
-
-    function startSession() {
-      alert("Session creation — coming in Milestone 7");
-    }
-
-    function endSession() {
-      alert("End session — coming in Milestone 7");
-    }
   </script>
 </body>
 </html>
