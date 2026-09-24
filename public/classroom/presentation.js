@@ -136,10 +136,21 @@ function initStudent() {
     window.location.href = "join.html";
     return;
   }
+  // Ensure teacher bar is hidden for students (CSS specificity fix)
+  document.getElementById("teacherBar").classList.add("hidden");
+  // Show room code and leave button in viewer header
+  document.getElementById("viewerRoomCode").textContent = "Room: " + room;
+  document.getElementById("viewerRoomCode").classList.remove("hidden");
+  document.getElementById("leaveRoomBtn").classList.remove("hidden");
   activeSession = { room_code: room, current_presentation_id: null, presentation_title: null };
   setPresentation("");
   studentPoll = setInterval(pollActiveSession, POLL_INTERVAL_MS);
   pollActiveSession();
+}
+
+function leaveRoom() {
+  if (studentPoll) { clearInterval(studentPoll); studentPoll = null; }
+  window.location.href = "join.html";
 }
 
 async function initTeacher() {

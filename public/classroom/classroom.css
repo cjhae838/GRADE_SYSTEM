@@ -375,6 +375,45 @@ body {
   font-weight: 600;
 }
 
+.viewer-room-code {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: monospace;
+  background: var(--bg);
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.viewer-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-ghost:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .viewer-tabs {
   display: flex;
   gap: 4px;
@@ -445,6 +484,10 @@ body {
   padding: 20px 24px;
   margin: 24px auto 0;
   max-width: 900px;
+}
+
+.control-bar.hidden {
+  display: none;
 }
 
 .control-room .room-code {

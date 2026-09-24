@@ -35,13 +35,17 @@
     <!-- Viewer Header -->
     <div class="viewer-header">
       <div class="viewer-title" id="viewerTitle">No presentation selected</div>
-      <div class="viewer-tabs">
-        <button class="viewer-tab active" data-tab="docs" onclick="switchTab('docs', this)">
-          Documentation
-        </button>
-        <button class="viewer-tab" data-tab="code" onclick="switchTab('code', this)">
-          Code
-        </button>
+      <div id="viewerRoomCode" class="viewer-room-code"></div>
+      <div class="viewer-actions">
+        <button id="leaveRoomBtn" class="btn btn-ghost hidden" onclick="leaveRoom()">Leave Room</button>
+        <div class="viewer-tabs">
+          <button class="viewer-tab active" data-tab="docs" onclick="switchTab('docs', this)">
+            Documentation
+          </button>
+          <button class="viewer-tab" data-tab="code" onclick="switchTab('code', this)">
+            Code
+          </button>
+        </div>
       </div>
     </div>
 
