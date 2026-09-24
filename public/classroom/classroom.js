@@ -36,6 +36,17 @@ function teacherHeaders(extra = {}) {
   };
 }
 
+// Teacher: list the current teacher's presentations (newest first).
+async function listPresentations() {
+  const teacher = encodeURIComponent(getTeacherAccount());
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/presentations?teacher_id=eq.${teacher}&order=created_at.desc`,
+    { headers: teacherHeaders() }
+  );
+  if (!res.ok) throw new Error(`Failed to load presentations (${res.status})`);
+  return res.json();
+}
+
 // Student-facing: returns the active session for a room code, or null.
 async function activeSessionByCode(code) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_active_session`, {

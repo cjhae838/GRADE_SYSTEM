@@ -3,7 +3,6 @@
 
 let presentations = [];
 let pendingDeleteId = null;
-let activeSession = null;
 
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({
@@ -13,16 +12,6 @@ function escapeHtml(s) {
 
 function storageObjectUrl(teacherFolder, filename) {
   return `${SUPABASE_URL}/storage/v1/object/presentations/${teacherFolder}/${filename}`;
-}
-
-async function listPresentations() {
-  const teacher = encodeURIComponent(getTeacherAccount());
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/presentations?teacher_id=eq.${teacher}&order=created_at.desc`,
-    { headers: teacherHeaders() }
-  );
-  if (!res.ok) throw new Error(`Failed to load presentations (${res.status})`);
-  return res.json();
 }
 
 async function createPresentation(title, pdfFile, pyFile) {
@@ -104,19 +93,6 @@ function generateRoomCode() {
   return Array.from(bytes, (b) => ROOM_CODE_ALPHABET[b % ROOM_CODE_ALPHABET.length]).join("");
 }
 
-function renderSession() {
-  const startBtn = document.getElementById("startSessionBtn");
-  const panel = document.getElementById("activeSession");
-  if (activeSession) {
-    document.getElementById("roomCode").textContent = activeSession.room_code;
-    panel.classList.remove("hidden");
-    startBtn.classList.add("hidden");
-  } else {
-    panel.classList.add("hidden");
-    startBtn.classList.remove("hidden");
-  }
-}
-
 async function loadActiveSession() {
   const teacher = encodeURIComponent(getTeacherAccount());
   const res = await fetch(
@@ -125,8 +101,7 @@ async function loadActiveSession() {
   );
   if (!res.ok) throw new Error(`Failed to load session (${res.status})`);
   const rows = await res.json();
-  activeSession = rows[0] || null;
-  renderSession();
+  if (rows.length) window.location.href = "presentation.html";
 }
 
 async function createSession() {
@@ -147,9 +122,6 @@ async function createSession() {
     });
     if (res.status === 409) continue; // room code collision, try again
     if (!res.ok) throw new Error(`Failed to start session (${res.status})`);
-    const rows = await res.json();
-    activeSession = rows[0];
-    renderSession();
     return;
   }
   throw new Error("Could not generate a unique room code");
@@ -160,37 +132,10 @@ async function startSession() {
   btn.disabled = true;
   try {
     await createSession();
+    window.location.href = "presentation.html";
   } catch (err) {
     console.error("Start session failed:", err);
     alert("Could not start a session — try again."); // ponytail: native alert, polish later
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-async function endSession() {
-  if (!activeSession) return;
-  const btn = document.querySelector("#activeSession .btn-danger");
-  btn.disabled = true;
-  const teacher = encodeURIComponent(getTeacherAccount());
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/sessions?id=eq.${activeSession.id}&teacher_id=eq.${teacher}`,
-      {
-        method: "PATCH",
-        headers: teacherHeaders({
-          "Content-Type": "application/json",
-          Prefer: "return=representation",
-        }),
-        body: JSON.stringify({ status: "ended", ended_at: new Date().toISOString() }),
-      }
-    );
-    if (!res.ok) throw new Error(`Failed to end session (${res.status})`);
-    activeSession = null;
-    renderSession();
-  } catch (err) {
-    console.error("End session failed:", err);
-    alert("Could not end the session — try again.");
   } finally {
     btn.disabled = false;
   }

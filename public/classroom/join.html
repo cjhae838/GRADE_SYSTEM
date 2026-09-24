@@ -36,29 +36,6 @@
         <p id="joinError" class="join-error hidden"></p>
       </div>
 
-      <!-- Joined (polling for session end) -->
-      <div id="joinedState" class="hidden">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;color:var(--success);margin-bottom:16px;">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-          <polyline points="22 4 12 14.01 9 11.01"/>
-        </svg>
-        <h1>Joined</h1>
-        <p class="subtitle">You're in room <strong id="joinedRoomCode"></strong></p>
-        <span class="status-badge status-active">Session active</span>
-        <p class="session-hint" style="margin-top:16px;">Waiting for the teacher to start the presentation.</p>
-        <button class="join-btn" onclick="leaveRoom()">Leave Room</button>
-      </div>
-
-      <!-- Ended (detected via polling) -->
-      <div id="endedState" class="hidden">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;color:var(--text-secondary);margin-bottom:16px;">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-        </svg>
-        <h1>Session Ended</h1>
-        <p class="subtitle">The presentation has ended.</p>
-        <button class="join-btn" onclick="backToJoin()">Join another room</button>
-      </div>
-
     </div>
   </div>
 
@@ -67,8 +44,6 @@
   <script>
     const roomCodeInput = document.getElementById("roomCodeInput");
     const joinError = document.getElementById("joinError");
-    let pollTimer = null;
-    let currentRoom = "";
 
     function showError(msg) {
       joinError.textContent = msg;
@@ -80,12 +55,6 @@
       joinError.textContent = "";
     }
 
-    function showState(id) {
-      ["joinForm", "joinedState", "endedState"].forEach((s) =>
-        document.getElementById(s).classList.toggle("hidden", s !== id)
-      );
-    }
-
     async function joinRoom() {
       const code = roomCodeInput.value.trim().toUpperCase();
       if (!code) return showError("Please enter a room code.");
@@ -95,44 +64,13 @@
       try {
         const session = await activeSessionByCode(code);
         if (!session) return showError("No active session found for that code.");
-        currentRoom = code;
-        document.getElementById("joinedRoomCode").textContent = code;
-        showState("joinedState");
-        clearInterval(pollTimer);
-        pollTimer = setInterval(pollSession, 4000);
+        window.location.href = "presentation.html?room=" + encodeURIComponent(code);
       } catch (err) {
         console.error("Join failed:", err);
         showError("Could not reach the server — try again.");
       } finally {
         btn.disabled = false;
       }
-    }
-
-    async function pollSession() {
-      try {
-        const session = await activeSessionByCode(currentRoom);
-        if (!session) {
-          clearInterval(pollTimer);
-          pollTimer = null;
-          currentRoom = "";
-          showState("endedState");
-        }
-      } catch {
-        // transient network error, keep polling
-      }
-    }
-
-    function leaveRoom() {
-      clearInterval(pollTimer);
-      pollTimer = null;
-      currentRoom = "";
-      showState("joinForm");
-    }
-
-    function backToJoin() {
-      roomCodeInput.value = "";
-      showState("joinForm");
-      roomCodeInput.focus();
     }
 
     roomCodeInput.addEventListener("keydown", (e) => {
