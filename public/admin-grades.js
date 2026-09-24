@@ -1,8 +1,7 @@
+// ===== Admin Grades Page Logic =====
+// Handles session validation and grade management
+
 // ===== DOM Elements =====
-const passwordModal = document.getElementById("passwordModal");
-const passwordInput = document.getElementById("passwordInput");
-const loginBtn = document.getElementById("loginBtn");
-const passwordError = document.getElementById("passwordError");
 const adminDashboard = document.getElementById("adminDashboard");
 const accountBadge = document.getElementById("accountBadge");
 const uploadModal = document.getElementById("uploadModal");
@@ -25,182 +24,40 @@ const deleteGradeConfirmBtn = document.getElementById("deleteGradeConfirmBtn");
 const addSectionModal = document.getElementById("addSectionModal");
 const newSectionInput = document.getElementById("newSectionInput");
 const addSectionStatus = document.getElementById("addSectionStatus");
-const loggingInModal = document.getElementById("loggingInModal");
 const loggingOutModal = document.getElementById("loggingOutModal");
-
-const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
-const MIN_MODAL_DISPLAY_MS = 2000; // 2 seconds minimum display time
-const SESSION_TOKEN_KEY = "admin_session_token";
-
-// ===== Helpers =====
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// ===== Auth Helpers =====
-function findAccountByPassword(password) {
-  return ADMIN_ACCOUNTS.find((a) => a.password === password);
-}
-
-function showError(msg) {
-  passwordError.textContent = msg;
-  passwordError.classList.remove("hidden");
-}
-
-function hideError() {
-  passwordError.classList.add("hidden");
-}
-
-// ===== Session Management =====
-async function recordActivity(accountName) {
-  try {
-    const token = localStorage.getItem(SESSION_TOKEN_KEY) || "";
-    await fetch(`${SUPABASE_URL}/rest/v1/admin_sessions`, {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-        Prefer: "resolution=merge-duplicates",
-      },
-      body: JSON.stringify({
-        account_name: accountName,
-        last_activity: new Date().toISOString(),
-        session_token: token,
-      }),
-    });
-  } catch {
-    // Non-critical — ignore errors
-  }
-}
-
-async function isSessionActive(accountName) {
-  try {
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(accountName)}&select=last_activity`,
-      {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-      }
-    );
-    if (!response.ok) return false;
-    const data = await response.json();
-    if (data.length === 0) return false;
-
-    const lastActive = new Date(data[0].last_activity);
-    const now = new Date();
-
-    // Expired — delete stale row
-    if (now - lastActive >= SESSION_TIMEOUT_MS) {
-      await deleteSession(accountName);
-      return false;
-    }
-
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function deleteSession(accountName) {
-  try {
-    await fetch(
-      `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(accountName)}`,
-      {
-        method: "DELETE",
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-      }
-    );
-  } catch {
-    // Ignore errors on logout
-  }
-}
 
 // ===== Auth =====
 async function checkAuth() {
   const account = localStorage.getItem("admin_account");
   const token = localStorage.getItem(SESSION_TOKEN_KEY);
 
-  if (account && token) {
-    const active = await isSessionActive(account);
-    if (active) {
-      const response = await fetch(
-        `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(account)}&select=session_token`,
-        {
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-        }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        if (data.length > 0 && data[0].session_token === token) {
-          await recordActivity(account);
-          passwordModal.classList.add("hidden");
-          showDashboard(account);
-          return;
-        }
+  if (!account || !token) {
+    window.location.href = "admin-a7x9k2.html";
+    return;
+  }
+
+  const active = await isSessionActive(account);
+  if (active) {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(account)}&select=session_token`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+    if (response.ok) {
+      const data = await response.json();
+      if (data.length > 0 && data[0].session_token === token) {
+        await recordActivity(account);
+        showDashboard(account);
+        return;
       }
     }
-    // Session expired or token mismatch — clear and show login
-    clearSession();
-    passwordModal.classList.remove("hidden");
   }
-}
-
-async function attemptLogin() {
-  const pw = passwordInput.value;
-  hideError();
-
-  if (!pw) {
-    showError("Please enter a password.");
-    return;
-  }
-
-  const account = findAccountByPassword(pw);
-  if (!account) {
-    showError("Incorrect password. Try again.");
-    passwordInput.value = "";
-    passwordInput.focus();
-    return;
-  }
-
-  // Show loading modal
-  loggingInModal.classList.remove("hidden");
-  const startTime = Date.now();
-
-  // Check if account already has an active session
-  const active = await isSessionActive(account.name);
-  if (active) {
-    const elapsed = Date.now() - startTime;
-    if (elapsed < MIN_MODAL_DISPLAY_MS) {
-      await wait(MIN_MODAL_DISPLAY_MS - elapsed);
-    }
-    loggingInModal.classList.add("hidden");
-    showError("This account is already active. Log out from the other session first.");
-    passwordInput.value = "";
-    passwordInput.focus();
-    return;
-  }
-
-  // Create session — generate token, record activity
-  const token = crypto.randomUUID();
-  localStorage.setItem(SESSION_TOKEN_KEY, token);
-  localStorage.setItem("admin_account", account.name);
-  await recordActivity(account.name);
-
-  const elapsed = Date.now() - startTime;
-  if (elapsed < MIN_MODAL_DISPLAY_MS) {
-    await wait(MIN_MODAL_DISPLAY_MS - elapsed);
-  }
-  loggingInModal.classList.add("hidden");
-  window.location.href = "chooser.html";
+  clearSession();
+  window.location.href = "admin-a7x9k2.html";
 }
 
 async function logout() {
@@ -215,28 +72,14 @@ async function logout() {
   if (elapsed < MIN_MODAL_DISPLAY_MS) {
     await wait(MIN_MODAL_DISPLAY_MS - elapsed);
   }
-  loggingOutModal.classList.add("hidden");
-  passwordModal.classList.remove("hidden");
-  adminDashboard.classList.add("hidden");
-  passwordInput.value = "";
-  hideError();
-}
-
-function clearSession() {
-  localStorage.removeItem("admin_account");
-  localStorage.removeItem(SESSION_TOKEN_KEY);
+  window.location.href = "admin-a7x9k2.html";
 }
 
 function showDashboard(accountName) {
-  passwordModal.classList.add("hidden");
   adminDashboard.classList.remove("hidden");
   accountBadge.textContent = accountName;
   loadSections();
 }
-
-passwordInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") attemptLogin();
-});
 
 // ===== Upload Modal =====
 function openUploadModal() {
@@ -257,12 +100,10 @@ function resetUploadForm() {
   uploadArea.classList.remove("dragover");
 }
 
-// Close modal on backdrop click
 uploadModal.addEventListener("click", (e) => {
   if (e.target === uploadModal) closeUploadModal();
 });
 
-// Close modal on Escape key
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     if (!uploadModal.classList.contains("hidden")) closeUploadModal();
@@ -354,15 +195,13 @@ async function uploadCSV() {
       headerIndex[normalizeHeader(h)] = i;
     });
 
-    // Map period to its grade column name
     const periodGradeCol = { P: "PRELIM", M: "MIDTERM", F: "FINAL" };
 
-    // Parse CSV rows — track validation details
     const gradeRows = [];
     const validationErrors = [];
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const rowNum = i + 2; // +2 because row 1 is header, and 0-indexed
+      const rowNum = i + 2;
 
       const period = row[headerIndex["P/M/F"]]?.trim().toUpperCase();
       if (!["P", "M", "F"].includes(period)) {
@@ -400,7 +239,6 @@ async function uploadCSV() {
         continue;
       }
 
-      // Dynamic grade column based on period
       const gradeColName = periodGradeCol[period];
       const gradeVal = row[headerIndex[gradeColName]]?.trim();
       const grade = parseFloat(gradeVal);
@@ -410,7 +248,6 @@ async function uploadCSV() {
         continue;
       }
 
-      // Parse EXAM Score, LAB %, QAR (optional)
       const examScoreVal = row[headerIndex["EXAM SCORE"]]?.trim();
       const examScore = examScoreVal ? parseFloat(examScoreVal) : null;
 
@@ -454,11 +291,9 @@ async function uploadCSV() {
       return;
     }
 
-    // Record activity before upload
     const account = localStorage.getItem("admin_account");
     if (account) await recordActivity(account);
 
-    // Fetch existing grades to detect duplicates
     showUploadStatus("Checking for duplicates...", "info");
     const existingKeys = new Set();
     try {
@@ -482,7 +317,6 @@ async function uploadCSV() {
       console.error("Error fetching existing grades:", err);
     }
 
-    // Filter out duplicates — track which ones were skipped
     const newRows = [];
     const duplicateRows = [];
     for (const row of gradeRows) {
@@ -508,9 +342,7 @@ async function uploadCSV() {
       return;
     }
 
-    // Batch insert — continue on failure
     let inserted = 0;
-    let failed = 0;
     const failedBatches = [];
     for (let i = 0; i < newRows.length; i += 50) {
       const batch = newRows.slice(i, i + 50).map(({ _studentNo, _studentName, _subjectCode, ...rest }) => rest);
@@ -528,14 +360,12 @@ async function uploadCSV() {
       if (!response.ok) {
         const err = await response.text();
         console.error("Batch insert error:", err);
-        failed += batch.length;
         failedBatches.push({ start: i + 1, end: Math.min(i + 50, newRows.length), error: err });
       } else {
         inserted += batch.length;
       }
     }
 
-    // Build detailed status message
     buildUploadReport(inserted, duplicateRows, validationErrors, failedBatches, newRows.length);
 
     loadSections();
@@ -554,7 +384,6 @@ async function uploadCSV() {
 function buildUploadReport(inserted, duplicateRows, validationErrors, failedBatches, totalNew) {
   const sections = [];
 
-  // Summary line
   const summaryParts = [];
   if (inserted > 0) summaryParts.push(`<span class="report-success">${inserted} uploaded</span>`);
   if (duplicateRows.length > 0) summaryParts.push(`<span class="report-warn">${duplicateRows.length} duplicates skipped</span>`);
@@ -562,7 +391,6 @@ function buildUploadReport(inserted, duplicateRows, validationErrors, failedBatc
   if (failedBatches.length > 0) summaryParts.push(`<span class="report-error">${failedBatches.reduce((s, b) => s + b.end - b.start + 1, 0)} failed</span>`);
   sections.push(`<div class="report-summary">${summaryParts.join(" &middot; ")}</div>`);
 
-  // Duplicate details
   if (duplicateRows.length > 0) {
     const show = duplicateRows.slice(0, 15);
     const list = show.map((r) =>
@@ -572,7 +400,6 @@ function buildUploadReport(inserted, duplicateRows, validationErrors, failedBatc
     sections.push(`<div class="report-section"><strong>Duplicates skipped:</strong><ul class="report-list">${list}${more}</ul></div>`);
   }
 
-  // Validation errors
   if (validationErrors.length > 0) {
     const show = validationErrors.slice(0, 15);
     const list = show.map((e) =>
@@ -582,7 +409,6 @@ function buildUploadReport(inserted, duplicateRows, validationErrors, failedBatc
     sections.push(`<div class="report-section"><strong>Invalid rows skipped:</strong><ul class="report-list">${list}${more}</ul></div>`);
   }
 
-  // Failed batches
   if (failedBatches.length > 0) {
     const list = failedBatches.map((b) =>
       `<li>Rows ${b.start}–${b.end}: ${escapeHtml(b.error).substring(0, 100)}</li>`
@@ -606,7 +432,6 @@ function resetUploadBtn() {
   `;
 }
 
-// CSV parser - auto-detects delimiter (comma or tab), handles quoted values
 function parseCSV(text) {
   const lines = text.split("\n").filter((l) => l.trim());
   if (lines.length < 2) return { headers: [], rows: [] };
@@ -684,7 +509,6 @@ async function loadSections() {
       sectionFilter.appendChild(opt);
     });
 
-    // Restore previous selection if still valid
     if (currentVal && sectionNames.includes(currentVal)) {
       sectionFilter.value = currentVal;
     }
@@ -772,7 +596,6 @@ async function deleteSection() {
   }
 }
 
-// Auto-load grades when section changes
 sectionFilter.addEventListener("change", async () => {
   if (sectionFilter.value) {
     const account = localStorage.getItem("admin_account");
@@ -814,7 +637,6 @@ async function loadGrades() {
 
     const data = await response.json();
 
-    // Decrypt student_no and student_name
     const decryptedRows = [];
     for (const row of data) {
       decryptedRows.push({
@@ -830,7 +652,6 @@ async function loadGrades() {
       });
     }
 
-    // Sort by student name alphabetically
     decryptedRows.sort((a, b) => a.student_name.localeCompare(b.student_name));
 
     if (decryptedRows.length === 0) {
@@ -848,7 +669,6 @@ async function loadGrades() {
       return;
     }
 
-    // Group by student_no + subject_code
     const gradesMap = {};
     decryptedRows.forEach((row) => {
       const key = `${row.student_no}|${row.subject_code}`;
@@ -881,7 +701,6 @@ async function loadGrades() {
       }
     });
 
-    // Render grouped table
     const entries = Object.values(gradesMap);
     gradesTableBody.innerHTML = "";
     let prevStudentNo = "";
@@ -924,7 +743,6 @@ async function loadGrades() {
     gradesLoading.classList.add("hidden");
     gradesTable.classList.remove("hidden");
 
-    // Count unique students
     const uniqueStudents = new Set(entries.map((g) => g.student_no)).size;
     gradesCount.textContent = `${entries.length} records \u00B7 ${uniqueStudents} students`;
   } catch (err) {
