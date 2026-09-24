@@ -2,7 +2,6 @@
 // Auth info stored in localStorage by admin page
 
 const SESSION_TOKEN_KEY = "admin_session_token";
-const MIN_MODAL_DISPLAY_MS = 2000;
 
 function getTeacherAccount() {
   return localStorage.getItem("admin_account");
@@ -46,15 +45,9 @@ function clearSession() {
 async function logout() {
   const loggingOutModal = document.getElementById("loggingOutModal");
   if (loggingOutModal) loggingOutModal.classList.remove("hidden");
-  const startTime = Date.now();
   const account = getTeacherAccount();
   if (account) await deleteSession(account);
   clearSession();
-  const elapsed = Date.now() - startTime;
-  if (elapsed < MIN_MODAL_DISPLAY_MS) {
-    await new Promise((resolve) => setTimeout(resolve, MIN_MODAL_DISPLAY_MS - elapsed));
-  }
-  if (loggingOutModal) loggingOutModal.classList.add("hidden");
   window.location.href = "../admin-a7x9k2.html";
 }
 
