@@ -150,6 +150,7 @@ async function checkAuth() {
     }
     // Session expired or token mismatch — clear and show login
     clearSession();
+    passwordModal.classList.remove("hidden");
   }
 }
 
