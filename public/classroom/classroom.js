@@ -22,7 +22,7 @@ function logout() {
 
 async function checkConnection() {
   const status = document.getElementById("connStatus");
-  if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
+  if (typeof SUPABASE_URL === "undefined" || typeof SUPABASE_ANON_KEY === "undefined") {
     console.error("Supabase config missing — run `node build.js` first.");
     if (status) { status.textContent = "Supabase config missing"; status.classList.remove("hidden"); }
     return false;
