@@ -75,15 +75,8 @@ async function attemptLogin() {
 
   const active = await isSessionActive(account.name);
   if (active) {
-    const elapsed = Date.now() - startTime;
-    if (elapsed < MIN_MODAL_DISPLAY_MS) {
-      await wait(MIN_MODAL_DISPLAY_MS - elapsed);
-    }
-    loggingInModal.classList.add("hidden");
-    showError("This account is already active. Log out from the other session first.");
-    passwordInput.value = "";
-    passwordInput.focus();
-    return;
+    // Take over: delete the existing session and proceed
+    await deleteSession(account.name);
   }
 
   const token = crypto.randomUUID();
