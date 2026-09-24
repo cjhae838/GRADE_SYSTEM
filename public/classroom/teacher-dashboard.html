@@ -93,10 +93,12 @@
 
   </div>
 
+  <script src="../config.js"></script>
   <script src="classroom.js"></script>
   <script>
     // Auth check
     if (!requireAuth()) throw new Error("Not authenticated");
+    checkConnection();
 
     function openAddPresentation() {
       alert("Add presentation form — coming in Milestone 3");
