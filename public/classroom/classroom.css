@@ -56,19 +56,6 @@ body {
   padding: 24px;
 }
 
-/* ponytail: temporary connection banner, remove with checkConnection in Milestone 3 */
-.conn-status {
-  background: #e7f5ec;
-  color: #1a7f3c;
-  border: 1px solid #9fd7b5;
-  border-radius: 6px;
-  padding: 10px 16px;
-  margin-bottom: 16px;
-}
-.conn-status.hidden {
-  display: none;
-}
-
 /* ===== Header ===== */
 .page-header {
   display: flex;
@@ -434,6 +421,193 @@ body {
 .status-active {
   background: var(--success-bg);
   color: var(--success);
+}
+
+/* ===== Modals ===== */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.modal-overlay.hidden {
+  display: none;
+}
+
+.classroom-modal-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--neo-outset);
+  padding: 32px;
+  max-width: 460px;
+  width: 100%;
+  animation: slideUp 0.4s ease;
+}
+
+.add-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.add-modal-header h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.modal-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--neo-outset-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.modal-close-btn:hover {
+  color: var(--text);
+  box-shadow: var(--neo-inset-sm);
+}
+
+.classroom-field {
+  margin-bottom: 16px;
+}
+
+.classroom-field label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.classroom-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 16px;
+  font-size: 0.88rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  border: none;
+  border-radius: var(--radius-sm);
+  outline: none;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--neo-inset);
+}
+
+.classroom-field input:focus {
+  box-shadow: var(--neo-inset), 0 0 0 3px var(--primary-glow);
+}
+
+.modal-error {
+  font-size: 0.85rem;
+  color: var(--error);
+  margin-bottom: 16px;
+}
+
+.modal-error.hidden {
+  display: none;
+}
+
+.confirm-modal-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--neo-outset);
+  padding: 32px;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  animation: slideUp 0.4s ease;
+}
+
+.confirm-modal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.confirm-modal-msg {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.confirm-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.confirm-cancel-btn {
+  padding: 10px 22px;
+  font-size: 0.82rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: var(--neo-outset-sm);
+}
+
+.confirm-cancel-btn:hover {
+  color: var(--text);
+}
+
+.confirm-cancel-btn:active {
+  box-shadow: var(--neo-inset-sm);
+}
+
+.confirm-delete-btn {
+  padding: 10px 22px;
+  font-size: 0.82rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  color: #fff;
+  background: var(--error);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: var(--neo-outset-sm);
+}
+
+.confirm-delete-btn:hover {
+  background: #dc2626;
+}
+
+.confirm-delete-btn:active {
+  box-shadow: var(--neo-inset-sm);
 }
 
 /* ===== Responsive ===== */

@@ -13,9 +13,6 @@
 
   <div class="page-container">
 
-    <!-- ponytail: temporary connection banner for testing, remove with checkConnection in Milestone 3 -->
-    <div id="connStatus" class="conn-status hidden"></div>
-
     <!-- Header -->
     <header class="page-header">
       <div class="page-header-left">
@@ -73,7 +70,7 @@
     <!-- My Presentations -->
     <div style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
       <h2 style="font-size: 1rem; font-weight: 700;">My Presentations</h2>
-      <button class="btn btn-primary btn-sm" onclick="openAddPresentation()">
+      <button class="btn btn-primary btn-sm" onclick="openAddPresentationModal()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"/>
           <line x1="5" y1="12" x2="19" y2="12"/>
@@ -83,29 +80,76 @@
     </div>
 
     <div id="presentationList" class="presentation-list">
-      <!-- Placeholder content for Milestone 1 -->
-      <div class="empty-state">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-        </svg>
-        <p>No presentations yet</p>
-        <p class="hint">Click "Add Presentation" to upload your first project</p>
-      </div>
+      <div class="empty-state"><p>Loading…</p></div>
     </div>
 
   </div>
 
+  <!-- Add Presentation Modal -->
+  <div id="addPresentationModal" class="modal-overlay hidden">
+    <div class="classroom-modal-card">
+      <div class="add-modal-header">
+        <h2>Add Presentation</h2>
+        <button class="modal-close-btn" onclick="closeAddPresentationModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="classroom-field">
+        <label for="presentationTitle">Title</label>
+        <input id="presentationTitle" type="text" placeholder="e.g. Garbage Segregation Robot">
+      </div>
+      <div class="classroom-field">
+        <label for="pdfFileInput">PDF document</label>
+        <input id="pdfFileInput" type="file" accept=".pdf,application/pdf">
+      </div>
+      <div class="classroom-field">
+        <label for="pythonFileInput">Python file</label>
+        <input id="pythonFileInput" type="file" accept=".py,text/x-python">
+      </div>
+      <p id="addPresentationStatus" class="modal-error hidden"></p>
+      <div class="confirm-modal-actions">
+        <button id="addPresentationCancelBtn" class="confirm-cancel-btn">Cancel</button>
+        <button id="addPresentationSaveBtn" class="btn btn-primary" onclick="savePresentation()">Upload</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Presentation Modal -->
+  <div id="deletePresentationModal" class="modal-overlay hidden">
+    <div class="confirm-modal-card">
+      <h3 class="confirm-modal-title">Delete Presentation</h3>
+      <p id="deletePresentationMsg" class="confirm-modal-msg"></p>
+      <div class="confirm-modal-actions">
+        <button id="deletePresentationCancelBtn" class="confirm-cancel-btn">Cancel</button>
+        <button id="deletePresentationConfirmBtn" class="confirm-delete-btn">Delete</button>
+      </div>
+    </div>
+  </div>
+
   <script src="../config.js"></script>
   <script src="classroom.js"></script>
+  <script src="teacher-dashboard.js"></script>
   <script>
     // Auth check
     if (!requireAuth()) throw new Error("Not authenticated");
-    checkConnection();
 
-    function openAddPresentation() {
-      alert("Add presentation form — coming in Milestone 3");
-    }
+    // Load and show presentations
+    (function loadDashboard() {
+      listPresentations()
+        .then((rows) => { presentations = rows; renderList(); })
+        .catch((err) => {
+          console.error("Failed to load presentations:", err);
+          document.getElementById("presentationList").innerHTML =
+            '<div class="empty-state"><p>Could not load presentations</p><p class="hint">Check the Supabase connection and refresh.</p></div>';
+        });
+    })();
+
+    document.getElementById("addPresentationCancelBtn").addEventListener("click", closeAddPresentationModal);
+    document.getElementById("deletePresentationCancelBtn").addEventListener("click", closeDeletePresentationModal);
+    document.getElementById("deletePresentationConfirmBtn").addEventListener("click", confirmDeletePresentation);
 
     function startSession() {
       alert("Session creation — coming in Milestone 7");
