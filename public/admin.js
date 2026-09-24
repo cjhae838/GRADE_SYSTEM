@@ -127,11 +127,8 @@ async function checkAuth() {
   const token = localStorage.getItem(SESSION_TOKEN_KEY);
 
   if (account && token) {
-    loggingInModal.classList.remove("hidden");
-    const startTime = Date.now();
     const active = await isSessionActive(account);
     if (active) {
-      // Session still active — verify token matches, then auto-login
       const response = await fetch(
         `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(account)}&select=session_token`,
         {
@@ -145,22 +142,13 @@ async function checkAuth() {
         const data = await response.json();
         if (data.length > 0 && data[0].session_token === token) {
           await recordActivity(account);
-          const elapsed = Date.now() - startTime;
-          if (elapsed < MIN_MODAL_DISPLAY_MS) {
-            await wait(MIN_MODAL_DISPLAY_MS - elapsed);
-          }
-          loggingInModal.classList.add("hidden");
+          passwordModal.classList.add("hidden");
           showDashboard(account);
           return;
         }
       }
     }
     // Session expired or token mismatch — clear and show login
-    const elapsed = Date.now() - startTime;
-    if (elapsed < MIN_MODAL_DISPLAY_MS) {
-      await wait(MIN_MODAL_DISPLAY_MS - elapsed);
-    }
-    loggingInModal.classList.add("hidden");
     clearSession();
   }
 }
