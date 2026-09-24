@@ -545,6 +545,62 @@ body {
   display: none;
 }
 
+/* ===== Shared Modal Card (matches style.css) ===== */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.modal-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--neo-outset);
+  padding: 40px 36px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  animation: slideUp 0.4s ease;
+}
+
+.modal-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 18px;
+  box-shadow: var(--neo-outset-sm);
+}
+
+.modal-icon svg {
+  width: 28px;
+  height: 28px;
+  color: var(--primary);
+}
+
+.modal-card h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.modal-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--shadow-dark);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
 .classroom-modal-card {
   background: var(--surface);
   border-radius: var(--radius-lg);
