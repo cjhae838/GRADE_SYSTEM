@@ -1,12 +1,15 @@
 // ===== Classroom Shared Utilities =====
 // Auth info stored in localStorage by admin page
 
+const SESSION_TOKEN_KEY = "admin_session_token";
+const MIN_MODAL_DISPLAY_MS = 2000;
+
 function getTeacherAccount() {
   return localStorage.getItem("admin_account");
 }
 
 function getSessionToken() {
-  return localStorage.getItem("admin_session_token");
+  return localStorage.getItem(SESSION_TOKEN_KEY);
 }
 
 function requireAuth() {
@@ -18,9 +21,40 @@ function requireAuth() {
   return account;
 }
 
-function logout() {
+async function deleteSession(accountName) {
+  try {
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(accountName)}`,
+      {
+        method: "DELETE",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+  } catch {
+    // Ignore errors on logout
+  }
+}
+
+function clearSession() {
   localStorage.removeItem("admin_account");
-  localStorage.removeItem("admin_session_token");
+  localStorage.removeItem(SESSION_TOKEN_KEY);
+}
+
+async function logout() {
+  const loggingOutModal = document.getElementById("loggingOutModal");
+  if (loggingOutModal) loggingOutModal.classList.remove("hidden");
+  const startTime = Date.now();
+  const account = getTeacherAccount();
+  if (account) await deleteSession(account);
+  clearSession();
+  const elapsed = Date.now() - startTime;
+  if (elapsed < MIN_MODAL_DISPLAY_MS) {
+    await new Promise((resolve) => setTimeout(resolve, MIN_MODAL_DISPLAY_MS - elapsed));
+  }
+  if (loggingOutModal) loggingOutModal.classList.add("hidden");
   window.location.href = "../admin-a7x9k2.html";
 }
 

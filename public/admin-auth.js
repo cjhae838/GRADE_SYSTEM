@@ -1,7 +1,7 @@
 // ===== Shared Admin Auth Module =====
 // Provides auth helpers for both login and grades pages
 
-const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const MIN_MODAL_DISPLAY_MS = 2000; // 2 seconds minimum display time
 const SESSION_TOKEN_KEY = "admin_session_token";
 
