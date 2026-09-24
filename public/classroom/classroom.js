@@ -21,8 +21,10 @@ function logout() {
 }
 
 async function checkConnection() {
+  const status = document.getElementById("connStatus");
   if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
     console.error("Supabase config missing — run `node build.js` first.");
+    if (status) { status.textContent = "Supabase config missing"; status.classList.remove("hidden"); }
     return false;
   }
   try {
@@ -35,8 +37,10 @@ async function checkConnection() {
         },
       }
     );
+    if (status) { status.textContent = res.ok ? "Connected to Supabase" : "Supabase connection failed"; status.classList.remove("hidden"); }
     return res.ok;
   } catch {
+    if (status) { status.textContent = "Supabase connection failed"; status.classList.remove("hidden"); }
     return false;
   }
 }
