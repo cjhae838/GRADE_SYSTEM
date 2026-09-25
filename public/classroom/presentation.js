@@ -9,6 +9,12 @@ const PDF_URL_TTL_MS = 55 * 60 * 1000; // 55 min buffer before 1hr signed URL ex
 let activeSession = null;
 let studentPoll = null;
 
+// PDF.js state
+let pdfDoc = null;
+let pdfPageNum = 1;
+let pdfScale = 1.0;
+let pdfIsFullscreen = false;
+
 function isTeacher() {
   return !!localStorage.getItem("admin_account");
 }
@@ -43,11 +49,231 @@ function setPresentation(title, presentationId, pdfPath, pdfSignedUrl) {
 }
 
 function hidePdf() {
-  document.getElementById("pdfFrame").classList.add("hidden");
+  // Clean up PDF.js state
+  if (pdfDoc) {
+    pdfDoc.destroy();
+    pdfDoc = null;
+  }
+  pdfPageNum = 1;
+  pdfScale = 1.0;
+  // Hide all PDF-related elements
+  document.getElementById("pdfViewer").classList.add("hidden");
   document.getElementById("pdfLoading").classList.add("hidden");
   document.getElementById("pdfError").classList.add("hidden");
+  updatePdfToolbar();
 }
 
+async function loadPdfBlob(signedUrl) {
+  console.log(`[PDF] Fetching PDF blob from signed URL`);
+  const res = await fetch(signedUrl);
+  if (!res.ok) throw new Error(`PDF fetch failed (${res.status})`);
+  return res.blob();
+}
+
+// Lazy-load PDF.js from CDN
+let pdfjsLib = null;
+async function loadPdfjs() {
+  if (pdfjsLib) return pdfjsLib;
+  console.log(`[PDF] Loading PDF.js from CDN`);
+  // Use global script loading approach
+  await new Promise((resolve, reject) => {
+    if (window.pdfjsLib) {
+      pdfjsLib = window.pdfjsLib;
+      resolve();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs';
+    script.type = 'module';
+    script.onload = () => {
+      pdfjsLib = window.pdfjsLib;
+      // Configure worker
+      if (pdfjsLib.GlobalWorkerOptions) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+      }
+      resolve();
+    };
+    script.onerror = () => reject(new Error('Failed to load PDF.js'));
+    document.head.appendChild(script);
+  });
+  return pdfjsLib;
+}
+
+async function showPdf(presentationId, pdfPath, pdfSignedUrl) {
+  const loading = document.getElementById("pdfLoading");
+  const error = document.getElementById("pdfError");
+  const viewer = document.getElementById("pdfViewer");
+  const canvas = document.getElementById("pdfCanvas");
+  
+  loading.classList.remove("hidden");
+  viewer.classList.add("hidden");
+  error.classList.add("hidden");
+  
+  // Reset PDF state
+  pdfPageNum = 1;
+  pdfScale = 1.0;
+  if (pdfDoc) {
+    pdfDoc.destroy();
+    pdfDoc = null;
+  }
+  
+  try {
+    let url = pdfSignedUrl;
+    if (!url && pdfPath) {
+      console.log(`[PDF] No pre-generated signed URL, generating fallback for: ${presentationId}, path: ${pdfPath}`);
+      url = await loadPdfUrl(presentationId, pdfPath);
+    } else if (url) {
+      console.log(`[PDF] Using pre-generated signed URL for: ${presentationId}`);
+    } else {
+      throw new Error("No PDF path or signed URL available");
+    }
+    
+    console.log(`[PDF] Loading PDF with PDF.js: ${url}`);
+    
+    // Load PDF.js if not loaded
+    await loadPdfjs();
+    
+    // Fetch PDF as blob
+    const blob = await loadPdfBlob(url);
+    
+    // Load PDF document
+    pdfDoc = await pdfjsLib.getDocument({ data: blob }).promise;
+    console.log(`[PDF] PDF loaded, ${pdfDoc.numPages} pages`);
+    
+    // Render first page
+    await renderPdfPage(pdfPageNum, canvas);
+    
+    // Show viewer
+    loading.classList.add("hidden");
+    viewer.classList.remove("hidden");
+    updatePdfToolbar();
+    
+  } catch (err) {
+    console.error(`[PDF] showPdf error:`, err);
+    loading.classList.add("hidden");
+    error.classList.remove("hidden");
+  }
+}
+
+async function renderPdfPage(pageNum, canvas) {
+  if (!pdfDoc) return;
+  
+  const page = await pdfDoc.getPage(pageNum);
+  const viewport = page.getViewport({ scale: pdfScale });
+  
+  // Set canvas size
+  const context = canvas.getContext('2d');
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  
+  // Render page
+  await page.render({
+    canvasContext: context,
+    viewport: viewport
+  }).promise;
+  
+  updatePdfToolbar();
+}
+
+function updatePdfToolbar() {
+  const pageInfo = document.getElementById("pdfPageInfo");
+  const zoomLevel = document.getElementById("pdfZoomLevel");
+  const prevBtn = document.getElementById("pdfPrevBtn");
+  const nextBtn = document.getElementById("pdfNextBtn");
+  const zoomOutBtn = document.getElementById("pdfZoomOutBtn");
+  const zoomInBtn = document.getElementById("pdfZoomInBtn");
+  const fullscreenBtn = document.getElementById("pdfFullscreenBtn");
+  
+  if (pdfDoc) {
+    pageInfo.textContent = `Page ${pdfPageNum} of ${pdfDoc.numPages}`;
+    zoomLevel.textContent = `${Math.round(pdfScale * 100)}%`;
+    prevBtn.disabled = pdfPageNum <= 1;
+    nextBtn.disabled = pdfPageNum >= pdfDoc.numPages;
+    zoomOutBtn.disabled = false;
+    zoomInBtn.disabled = false;
+    fullscreenBtn.disabled = false;
+  } else {
+    pageInfo.textContent = "Page 1 of 1";
+    zoomLevel.textContent = "100%";
+    prevBtn.disabled = true;
+    nextBtn.disabled = true;
+    zoomOutBtn.disabled = true;
+    zoomInBtn.disabled = true;
+    fullscreenBtn.disabled = true;
+  }
+}
+
+async function pdfPrevPage() {
+  if (pdfPageNum > 1) {
+    pdfPageNum--;
+    await renderPdfPage(pdfPageNum, document.getElementById("pdfCanvas"));
+  }
+}
+
+async function pdfNextPage() {
+  if (pdfDoc && pdfPageNum < pdfDoc.numPages) {
+    pdfPageNum++;
+    await renderPdfPage(pdfPageNum, document.getElementById("pdfCanvas"));
+  }
+}
+
+function pdfZoomIn() {
+  if (pdfScale < 3.0) {
+    pdfScale = Math.min(3.0, pdfScale + 0.25);
+    renderPdfPage(pdfPageNum, document.getElementById("pdfCanvas"));
+  }
+}
+
+function pdfZoomOut() {
+  if (pdfScale > 0.5) {
+    pdfScale = Math.max(0.5, pdfScale - 0.25);
+    renderPdfPage(pdfPageNum, document.getElementById("pdfCanvas"));
+  }
+}
+
+function pdfToggleFullscreen() {
+  const container = document.querySelector(".pdf-canvas-container");
+  if (!pdfIsFullscreen) {
+    container.requestFullscreen().catch(() => {});
+    pdfIsFullscreen = true;
+  } else {
+    document.exitFullscreen().catch(() => {});
+    pdfIsFullscreen = false;
+  }
+}
+
+function retryPdf() {
+  if (activeSession?.current_presentation_id && activeSession?.pdf_path) {
+    showPdf(activeSession.current_presentation_id, activeSession.pdf_path);
+  }
+}
+
+async function generatePdfSignedUrl(pdfPath) {
+  if (!pdfPath) throw new Error("No PDF path available");
+  console.log(`[PDF] Generating signed URL (teacher) for: ${pdfPath}`);
+  const signUrl = `${SUPABASE_URL}/storage/v1/object/sign/presentations/${pdfPath}`;
+  console.log(`[PDF] POST ${signUrl}`);
+  const res = await fetch(signUrl, {
+    method: "POST",
+    headers: teacherHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({ expiresIn: 3600 }),
+  });
+  console.log(`[PDF] Response status: ${res.status}`);
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error(`[PDF] Signed URL fetch failed (${res.status}):`, errText);
+    throw new Error(`Signed URL fetch failed (${res.status}): ${errText}`);
+  }
+  const data = await res.json();
+  console.log(`[PDF] Response data:`, data);
+  const url = `${SUPABASE_URL}${data.signedURL}`;
+  console.log(`[PDF] Final signed URL: ${url}`);
+  return url;
+}
+
+// Keep loadPdfUrl for teacher fallback (when no pre-generated URL exists)
 async function loadPdfUrl(presentationId, pdfPath) {
   const cacheKey = `pdf_url_${presentationId}`;
   const cached = sessionStorage.getItem(cacheKey);
@@ -84,73 +310,6 @@ async function loadPdfUrl(presentationId, pdfPath) {
   const url = `${SUPABASE_URL}${data.signedURL}`;
   console.log(`[PDF] Final signed URL: ${url}`);
   sessionStorage.setItem(cacheKey, JSON.stringify({ url, expires: Date.now() + PDF_URL_TTL_MS }));
-  return url;
-}
-
-async function showPdf(presentationId, pdfPath, pdfSignedUrl) {
-  const frame = document.getElementById("pdfFrame");
-  const loading = document.getElementById("pdfLoading");
-  const error = document.getElementById("pdfError");
-  loading.classList.remove("hidden");
-  frame.classList.add("hidden");
-  error.classList.add("hidden");
-  try {
-    let url = pdfSignedUrl;
-    if (!url && pdfPath) {
-      console.log(`[PDF] No pre-generated signed URL, generating fallback for: ${presentationId}, path: ${pdfPath}`);
-      url = await loadPdfUrl(presentationId, pdfPath);
-    } else if (url) {
-      console.log(`[PDF] Using pre-generated signed URL for: ${presentationId}`);
-    } else {
-      throw new Error("No PDF path or signed URL available");
-    }
-    console.log(`[PDF] Setting iframe src`);
-    frame.src = url;
-    frame.onload = () => {
-      console.log(`[PDF] iframe loaded successfully`);
-      loading.classList.add("hidden");
-      frame.classList.remove("hidden");
-    };
-    frame.onerror = (e) => {
-      console.error(`[PDF] iframe onerror:`, e);
-      loading.classList.add("hidden");
-      error.classList.remove("hidden");
-    };
-  } catch (err) {
-    console.error(`[PDF] showPdf error:`, err);
-    loading.classList.add("hidden");
-    error.classList.remove("hidden");
-  }
-}
-
-function retryPdf() {
-  if (activeSession?.current_presentation_id && activeSession?.pdf_path) {
-    showPdf(activeSession.current_presentation_id, activeSession.pdf_path);
-  }
-}
-
-async function generatePdfSignedUrl(pdfPath) {
-  if (!pdfPath) throw new Error("No PDF path available");
-  console.log(`[PDF] Generating signed URL (teacher) for: ${pdfPath}`);
-  const signUrl = `${SUPABASE_URL}/storage/v1/object/sign/presentations/${pdfPath}`;
-  console.log(`[PDF] POST ${signUrl}`);
-  const res = await fetch(signUrl, {
-    method: "POST",
-    headers: teacherHeaders({
-      "Content-Type": "application/json",
-    }),
-    body: JSON.stringify({ expiresIn: 3600 }),
-  });
-  console.log(`[PDF] Response status: ${res.status}`);
-  if (!res.ok) {
-    const errText = await res.text();
-    console.error(`[PDF] Signed URL fetch failed (${res.status}):`, errText);
-    throw new Error(`Signed URL fetch failed (${res.status}): ${errText}`);
-  }
-  const data = await res.json();
-  console.log(`[PDF] Response data:`, data);
-  const url = `${SUPABASE_URL}${data.signedURL}`;
-  console.log(`[PDF] Final signed URL: ${url}`);
   return url;
 }
 
