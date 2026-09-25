@@ -51,7 +51,7 @@ body {
 
 /* ===== Layout ===== */
 .page-container {
-  max-width: 900px;
+  /*max-width: 900px; */
   margin: 0 auto;
   padding: 24px;
 }
@@ -367,6 +367,7 @@ body {
   background: var(--surface);
   box-shadow: var(--neo-outset-sm);
   margin-bottom: 16px;
+  margin-top: 16px;
   border-radius: var(--radius-sm);
 }
 
@@ -447,7 +448,7 @@ body {
   border-radius: var(--radius);
   box-shadow: var(--neo-outset);
   min-height: 500px;
-  padding: 24px;
+  padding: 0;
   display: none;
 }
 
@@ -483,7 +484,7 @@ body {
   border-radius: var(--radius);
   padding: 20px 24px;
   margin: 24px auto 0;
-  max-width: 900px;
+  max-width: 90vw;
 }
 
 .control-bar.hidden {
@@ -750,7 +751,7 @@ body {
 
 /* Remove max-width constraint when PDF viewer active */
 .page-container:has(.pdf-viewer:not(.hidden)) {
-  max-width: none;
+  max-width: 90vw;
   padding: 0;
 }
 
