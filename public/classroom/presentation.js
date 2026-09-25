@@ -4,7 +4,6 @@
 // Student mode: ?room=CODE, polls get_active_session for the current presentation.
 
 const POLL_INTERVAL_MS = 4000;
-const PDF_URL_TTL_MS = 55 * 60 * 1000; // 55 min buffer before 1hr signed URL expiry
 
 let activeSession = null;
 let studentPoll = null;
@@ -31,7 +30,7 @@ function switchTab(tab, btn) {
   document.getElementById("panel-" + tab).classList.add("active");
 }
 
-function setPresentation(title, presentationId, pdfPath, pdfSignedUrl) {
+function setPresentation(title, presentationId, pdfPath, pdfPublicUrl) {
   if (title) {
     document.getElementById("viewerTitle").textContent = title;
   } else {
@@ -42,7 +41,7 @@ function setPresentation(title, presentationId, pdfPath, pdfSignedUrl) {
   if (docsTab) switchTab("docs", docsTab);
   // Load PDF if we have a presentation ID and path
   if (presentationId && pdfPath) {
-    showPdf(presentationId, pdfPath, pdfSignedUrl);
+    showPdf(presentationId, pdfPath, pdfPublicUrl);
   } else {
     hidePdf();
   }
@@ -63,9 +62,9 @@ function hidePdf() {
   updatePdfToolbar();
 }
 
-async function loadPdfBlob(signedUrl) {
-  console.log(`[PDF] Fetching PDF blob from signed URL`);
-  const res = await fetch(signedUrl);
+async function loadPdfBlob(publicUrl) {
+  console.log(`[PDF] Fetching PDF blob from public URL`);
+  const res = await fetch(publicUrl);
   if (!res.ok) throw new Error(`PDF fetch failed (${res.status})`);
   return res.blob();
 }
@@ -75,7 +74,6 @@ let pdfjsLib = null;
 async function loadPdfjs() {
   if (pdfjsLib) return pdfjsLib;
   console.log(`[PDF] Loading PDF.js from CDN`);
-  // Use global script loading approach
   await new Promise((resolve, reject) => {
     if (window.pdfjsLib) {
       pdfjsLib = window.pdfjsLib;
@@ -87,7 +85,6 @@ async function loadPdfjs() {
     script.type = 'module';
     script.onload = () => {
       pdfjsLib = window.pdfjsLib;
-      // Configure worker
       if (pdfjsLib.GlobalWorkerOptions) {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
       }
@@ -99,7 +96,7 @@ async function loadPdfjs() {
   return pdfjsLib;
 }
 
-async function showPdf(presentationId, pdfPath, pdfSignedUrl) {
+async function showPdf(presentationId, pdfPath, pdfPublicUrl) {
   const loading = document.getElementById("pdfLoading");
   const error = document.getElementById("pdfError");
   const viewer = document.getElementById("pdfViewer");
@@ -118,14 +115,9 @@ async function showPdf(presentationId, pdfPath, pdfSignedUrl) {
   }
   
   try {
-    let url = pdfSignedUrl;
-    if (!url && pdfPath) {
-      console.log(`[PDF] No pre-generated signed URL, generating fallback for: ${presentationId}, path: ${pdfPath}`);
-      url = await loadPdfUrl(presentationId, pdfPath);
-    } else if (url) {
-      console.log(`[PDF] Using pre-generated signed URL for: ${presentationId}`);
-    } else {
-      throw new Error("No PDF path or signed URL available");
+    const url = pdfPublicUrl;
+    if (!url) {
+      throw new Error("No public PDF URL available");
     }
     
     console.log(`[PDF] Loading PDF with PDF.js: ${url}`);
@@ -243,74 +235,9 @@ function pdfToggleFullscreen() {
 }
 
 function retryPdf() {
-  if (activeSession?.current_presentation_id && activeSession?.pdf_path) {
-    showPdf(activeSession.current_presentation_id, activeSession.pdf_path);
+  if (activeSession?.current_presentation_id && activeSession?.pdf_path && activeSession?.pdf_public_url) {
+    showPdf(activeSession.current_presentation_id, activeSession.pdf_path, activeSession.pdf_public_url);
   }
-}
-
-async function generatePdfSignedUrl(pdfPath) {
-  if (!pdfPath) throw new Error("No PDF path available");
-  console.log(`[PDF] Generating signed URL (teacher) for: ${pdfPath}`);
-  const signUrl = `${SUPABASE_URL}/storage/v1/object/sign/presentations/${pdfPath}`;
-  console.log(`[PDF] POST ${signUrl}`);
-  const res = await fetch(signUrl, {
-    method: "POST",
-    headers: teacherHeaders({
-      "Content-Type": "application/json",
-    }),
-    body: JSON.stringify({ expiresIn: 3600 }),
-  });
-  console.log(`[PDF] Response status: ${res.status}`);
-  if (!res.ok) {
-    const errText = await res.text();
-    console.error(`[PDF] Signed URL fetch failed (${res.status}):`, errText);
-    throw new Error(`Signed URL fetch failed (${res.status}): ${errText}`);
-  }
-  const data = await res.json();
-  console.log(`[PDF] Response data:`, data);
-  const url = `${SUPABASE_URL}${data.signedURL}`;
-  console.log(`[PDF] Final signed URL: ${url}`);
-  return url;
-}
-
-// Keep loadPdfUrl for teacher fallback (when no pre-generated URL exists)
-async function loadPdfUrl(presentationId, pdfPath) {
-  const cacheKey = `pdf_url_${presentationId}`;
-  const cached = sessionStorage.getItem(cacheKey);
-  if (cached) {
-    const { url, expires } = JSON.parse(cached);
-    if (Date.now() < expires) {
-      console.log(`[PDF] Cache hit for ${presentationId}`);
-      return url;
-    }
-  }
-  if (!pdfPath) throw new Error("No PDF path available");
-  console.log(`[PDF] Generating signed URL for: ${pdfPath}`);
-  // Don't encode the full path - Supabase expects literal '/' separators
-  const signUrl = `${SUPABASE_URL}/storage/v1/object/sign/presentations/${pdfPath}`;
-  console.log(`[PDF] POST ${signUrl}`);
-  const res = await fetch(signUrl, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ expiresIn: 3600 }),
-  });
-  console.log(`[PDF] Response status: ${res.status}`);
-  if (!res.ok) {
-    const errText = await res.text();
-    console.error(`[PDF] Signed URL fetch failed (${res.status}):`, errText);
-    throw new Error(`Signed URL fetch failed (${res.status}): ${errText}`);
-  }
-  const data = await res.json();
-  console.log(`[PDF] Response data:`, data);
-  // data.signedURL is like "/storage/v1/object/sign/..." - DO NOT prepend /storage/v1
-  const url = `${SUPABASE_URL}${data.signedURL}`;
-  console.log(`[PDF] Final signed URL: ${url}`);
-  sessionStorage.setItem(cacheKey, JSON.stringify({ url, expires: Date.now() + PDF_URL_TTL_MS }));
-  return url;
 }
 
 // ===== Teacher mode =====
@@ -344,7 +271,7 @@ async function renderTeacherSession() {
   if (activeSession.current_presentation_id) {
     picker.value = activeSession.current_presentation_id;
     const current = rows.find((p) => p.id === activeSession.current_presentation_id);
-    setPresentation(current ? current.title : "", current ? current.id : null, current ? current.pdf_path : null, activeSession.pdf_signed_url);
+    setPresentation(current ? current.title : "", current ? current.id : null, current ? current.pdf_path : null, activeSession.pdf_public_url);
     document.getElementById("pickerHint").textContent = "Switch presentation anytime.";
   } else {
     setPresentation("", null, null, null);
@@ -355,8 +282,7 @@ async function renderTeacherSession() {
 
 async function switchPresentation(id) {
   const teacher = encodeURIComponent(getTeacherAccount());
-  // 1. Update the session with the new presentation_id
-  let res = await fetch(
+  const res = await fetch(
     `${SUPABASE_URL}/rest/v1/sessions?id=eq.${activeSession.id}&teacher_id=eq.${teacher}`,
     {
       method: "PATCH",
@@ -364,41 +290,11 @@ async function switchPresentation(id) {
         "Content-Type": "application/json",
         Prefer: "return=representation",
       }),
-      body: JSON.stringify({ current_presentation_id: id || null, pdf_signed_url: null }),
+      body: JSON.stringify({ current_presentation_id: id || null }),
     }
   );
   if (!res.ok) throw new Error(`Failed to switch presentation (${res.status})`);
   activeSession = (await res.json())[0];
-
-  // 2. If a presentation was selected, generate signed URL and update session
-  if (id) {
-    const rows = await listPresentations();
-    const current = rows.find((p) => p.id === id);
-    if (current?.pdf_path) {
-      try {
-        const pdfSignedUrl = await generatePdfSignedUrl(current.pdf_path);
-        res = await fetch(
-          `${SUPABASE_URL}/rest/v1/sessions?id=eq.${activeSession.id}&teacher_id=eq.${teacher}`,
-          {
-            method: "PATCH",
-            headers: teacherHeaders({
-              "Content-Type": "application/json",
-              Prefer: "return=representation",
-            }),
-            body: JSON.stringify({ pdf_signed_url: pdfSignedUrl }),
-          }
-        );
-        if (res.ok) {
-          activeSession = (await res.json())[0];
-        } else {
-          console.warn("[PDF] Failed to store signed URL in session:", res.status);
-        }
-      } catch (err) {
-        console.warn("[PDF] Failed to generate signed URL:", err);
-      }
-    }
-  }
-
   await renderTeacherSession();
 }
 
@@ -436,7 +332,7 @@ async function pollActiveSession() {
     const changed = session.current_presentation_id !== activeSession.current_presentation_id ||
                     session.presentation_title !== activeSession.presentation_title;
     activeSession = session;
-    setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path, session.pdf_signed_url);
+    setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path, session.pdf_public_url);
   } catch {
     // transient network error, keep polling
   }
