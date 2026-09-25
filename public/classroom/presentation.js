@@ -25,7 +25,11 @@ function switchTab(tab, btn) {
 }
 
 function setPresentation(title) {
-  document.getElementById("viewerTitle").textContent = title || "No presentation selected";
+  if (title) {
+    document.getElementById("viewerTitle").textContent = title;
+  } else {
+    document.getElementById("viewerTitle").textContent = "Waiting for the teacher to select a project...";
+  }
   // initial view is the Documentation (PDF) tab
   const docsTab = document.querySelector(".viewer-tab[data-tab='docs']");
   if (docsTab) switchTab("docs", docsTab);
