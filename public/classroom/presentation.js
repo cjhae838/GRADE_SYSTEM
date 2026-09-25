@@ -10,6 +10,7 @@ let studentPoll = null;
 
 // PDF.js state
 let pdfDoc = null;
+let pdfScale = 1.0; // 1.0 = fit-width, >1 = zoom in, <1 = zoom out
 let pdfIsFullscreen = false;
 
 function isTeacher() {
@@ -51,11 +52,12 @@ function hidePdf() {
     pdfDoc.destroy();
     pdfDoc = null;
   }
+  pdfScale = 1.0;
   // Hide all PDF-related elements and clear canvases
   document.getElementById("pdfViewer").classList.add("hidden");
   document.getElementById("pdfLoading").classList.add("hidden");
   document.getElementById("pdfError").classList.add("hidden");
-  const container = document.getElementById("pdfCanvasContainer");
+  const container = document.getElementById("pdfContentArea");
   if (container) container.innerHTML = "";
   updatePdfToolbar();
 }
@@ -108,6 +110,7 @@ async function showPdf(presentationId, pdfPath, pdfPublicUrl) {
     pdfDoc.destroy();
     pdfDoc = null;
   }
+  pdfScale = 1.0; // reset to fit-width
   
   try {
     const url = pdfPublicUrl;
@@ -142,33 +145,28 @@ async function showPdf(presentationId, pdfPath, pdfPublicUrl) {
   }
 }
 
-// Calculate exact fit-width scale based on container width
+// Calculate exact fit-width scale based on viewport width
 async function calculateFitWidthScale() {
   if (!pdfDoc) return 1.0;
-  const container = document.querySelector(".pdf-canvas-container");
-  if (!container) return 1.0;
-  
+  // Use viewport width for true full-width
   const page = await pdfDoc.getPage(1);
   const viewport = page.getViewport({ scale: 1.0 });
-  return container.clientWidth / viewport.width;
+  return window.innerWidth / viewport.width;
 }
 
 async function renderAllPages() {
   if (!pdfDoc) return;
   
-  const container = document.querySelector(".pdf-canvas-container");
-  if (!container) return;
+  const scale = (await calculateFitWidthScale()) * pdfScale;
   
-  const scale = await calculateFitWidthScale();
-  
-  console.log(`[PDF] Rendering ${pdfDoc.numPages} pages at fit-width scale ${scale.toFixed(3)}`);
+  console.log(`[PDF] Rendering ${pdfDoc.numPages} pages at scale ${scale.toFixed(3)} (fitWidth * zoom: ${pdfScale.toFixed(2)})`);
   
   // Clear existing canvases
-  const containerEl = document.getElementById("pdfCanvasContainer");
+  const containerEl = document.getElementById("pdfContentArea");
   if (!containerEl) return;
   containerEl.innerHTML = "";
   
-  // Get all page viewports at fit-width scale
+  // Get all page viewports at current scale
   const viewports = [];
   for (let i = 1; i <= pdfDoc.numPages; i++) {
     const page = await pdfDoc.getPage(i);
@@ -176,7 +174,7 @@ async function renderAllPages() {
     viewports.push(viewport);
   }
   
-  // Create canvas for each page at exact fit-width with high-DPI support
+  // Create canvas for each page at exact scale with high-DPI support
   const dpr = window.devicePixelRatio || 1;
   
   for (let i = 0; i < viewports.length; i++) {
@@ -203,25 +201,54 @@ async function renderAllPages() {
       viewport: viewport
     }).promise;
     
-    containerEl.appendChild(canvas);
+    document.getElementById("pdfContentArea").appendChild(canvas);
   }
   
-  console.log(`[PDF] Rendered ${pdfDoc.numPages} canvases at fit-width`);
+  console.log(`[PDF] Rendered ${pdfDoc.numPages} canvases at scale ${scale.toFixed(3)}`);
   updatePdfToolbar();
 }
 
+async function reRenderAllPages() {
+  // Destroy existing canvases and re-render at new scale
+  document.getElementById("pdfContentArea").innerHTML = "";
+  await renderAllPages();
+}
+
 function updatePdfToolbar() {
+  const zoomLevel = document.getElementById("pdfZoomLevel");
+  const zoomOutBtn = document.getElementById("pdfZoomOutBtn");
+  const zoomInBtn = document.getElementById("pdfZoomInBtn");
   const fullscreenBtn = document.getElementById("pdfFullscreenBtn");
   
   if (pdfDoc) {
+    zoomLevel.textContent = `${Math.round(pdfScale * 100)}%`;
+    zoomOutBtn.disabled = false;
+    zoomInBtn.disabled = false;
     fullscreenBtn.disabled = false;
   } else {
+    zoomLevel.textContent = "100%";
+    zoomOutBtn.disabled = true;
+    zoomInBtn.disabled = true;
     fullscreenBtn.disabled = true;
   }
 }
 
+function pdfZoomIn() {
+  if (pdfScale < 3.0) {
+    pdfScale = Math.min(3.0, pdfScale + 0.25);
+    reRenderAllPages();
+  }
+}
+
+function pdfZoomOut() {
+  if (pdfScale > 0.5) {
+    pdfScale = Math.max(0.5, pdfScale - 0.25);
+    reRenderAllPages();
+  }
+}
+
 function pdfToggleFullscreen() {
-  const container = document.querySelector(".pdf-canvas-container");
+  const container = document.querySelector(".pdf-content-area");
   if (!pdfIsFullscreen) {
     container.requestFullscreen().catch(() => {});
     pdfIsFullscreen = true;

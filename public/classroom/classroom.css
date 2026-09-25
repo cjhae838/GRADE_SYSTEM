@@ -677,22 +677,19 @@ body {
   width: 100%;
   height: auto;
   max-width: none;
+  display: block;
   box-shadow: var(--neo-inset-sm);
   background: white;
-  margin-bottom: 8px;
-}
-
-.pdf-page-canvas:last-child {
   margin-bottom: 0;
 }
 
 /* Fullscreen styles */
-.pdf-canvas-container:fullscreen {
+.pdf-content-area:fullscreen {
   background: black;
   padding: 0;
 }
 
-.pdf-canvas-container:fullscreen .pdf-page-canvas {
+.pdf-content-area:fullscreen .pdf-page-canvas {
   box-shadow: none;
   max-width: 100%;
   height: auto;
@@ -702,12 +699,13 @@ body {
 
 /* Mobile touch scrolling */
 @media (max-width: 768px) {
-  .pdf-canvas-container {
+  .pdf-content-area {
     -webkit-overflow-scrolling: touch;
   }
-  .pdf-page-canvas {
-    margin-bottom: 4px;
-  }
+}
+
+.pdf-viewer {
+  overflow: visible;
 }
 
 .classroom-modal-card {
