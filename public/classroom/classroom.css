@@ -742,6 +742,7 @@ body {
   }
   .pdf-toolbar-fixed {
     padding: 8px 12px;
+    width: 60vw;
   }
   .pdf-btn {
     width: 40px;
