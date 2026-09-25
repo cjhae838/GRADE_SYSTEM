@@ -55,7 +55,8 @@
         <div class="spinner"></div>
         <p>Loading PDF…</p>
       </div>
-      <div id="pdfViewer" class="pdf-viewer hidden">
+      <!-- Fixed toolbar at panel level (outside pdf-viewer) -->
+      <div id="pdfToolbar" class="pdf-toolbar-fixed hidden">
         <div class="pdf-toolbar">
           <div class="pdf-toolbar-spacer"></div>
           <button class="btn btn-ghost pdf-btn" id="pdfZoomOutBtn" onclick="pdfZoomOut()" disabled title="Zoom out">
@@ -80,6 +81,8 @@
             </svg>
           </button>
         </div>
+      </div>
+      <div id="pdfViewer" class="pdf-viewer hidden">
         <div id="pdfContentArea" class="pdf-content-area">
           <!-- Multiple stacked canvases will be inserted here -->
         </div>

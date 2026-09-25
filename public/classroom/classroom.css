@@ -608,22 +608,38 @@ body {
 
 /* ===== PDF Viewer ===== */
 .pdf-viewer {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 500px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: var(--surface);
-  border-radius: var(--radius);
+  z-index: 50;
+  padding-top: 60px; /* toolbar height */
+  border-radius: 0;
   overflow: hidden;
+}
+
+.pdf-toolbar-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--shadow-dark);
+  flex-wrap: wrap;
 }
 
 .pdf-toolbar {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 16px;
-  background: var(--bg);
-  border-bottom: 1px solid var(--shadow-dark);
   flex-wrap: wrap;
 }
 
@@ -657,51 +673,79 @@ body {
   height: 18px;
 }
 
+.pdf-zoom-level {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+  margin: 0 8px;
+  min-width: 50px;
+  text-align: center;
+}
+
 .pdf-toolbar-spacer {
   flex: 1;
 }
 
-.pdf-canvas-container {
+/* Content area - fills viewport, centers canvases horizontally */
+.pdf-content-area {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  background: var(--bg);
+  padding: 24px 24px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--bg);
-  padding: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .pdf-page-canvas {
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   height: auto;
-  max-width: none;
   display: block;
+  margin: 0 auto 16px;
   box-shadow: var(--neo-inset-sm);
   background: white;
-  margin-bottom: 0;
+}
+
+.pdf-page-canvas:last-child {
+  margin-bottom: 24px;
 }
 
 /* Fullscreen styles */
-.pdf-content-area:fullscreen {
+.pdf-viewer:fullscreen {
   background: black;
-  padding: 0;
+  border-radius: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  padding-top: 60px;
 }
 
-.pdf-content-area:fullscreen .pdf-page-canvas {
-  box-shadow: none;
-  max-width: 100%;
-  height: auto;
-  width: 100%;
-  object-fit: contain;
+.pdf-content-area:fullscreen {
+  background: black;
+  padding: 24px;
 }
 
 /* Mobile touch scrolling */
 @media (max-width: 768px) {
   .pdf-content-area {
-    -webkit-overflow-scrolling: touch;
+    padding: 16px 16px 16px;
   }
+  .pdf-page-canvas {
+    margin-bottom: 8px;
+  }
+}
+
+/* Remove max-width constraint when PDF viewer active */
+.page-container:has(.pdf-viewer:not(.hidden)) {
+  max-width: none;
+  padding: 0;
 }
 
 .pdf-viewer {

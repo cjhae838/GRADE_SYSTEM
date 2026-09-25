@@ -55,6 +55,7 @@ function hidePdf() {
   pdfScale = 1.0;
   // Hide all PDF-related elements and clear canvases
   document.getElementById("pdfViewer").classList.add("hidden");
+  document.getElementById("pdfToolbar").classList.add("hidden");
   document.getElementById("pdfLoading").classList.add("hidden");
   document.getElementById("pdfError").classList.add("hidden");
   const container = document.getElementById("pdfContentArea");
@@ -136,6 +137,7 @@ async function showPdf(presentationId, pdfPath, pdfPublicUrl) {
     // Show viewer
     loading.classList.add("hidden");
     viewer.classList.remove("hidden");
+    document.getElementById("pdfToolbar").classList.remove("hidden");
     updatePdfToolbar();
     
   } catch (err) {
@@ -145,13 +147,16 @@ async function showPdf(presentationId, pdfPath, pdfPublicUrl) {
   }
 }
 
-// Calculate exact fit-width scale based on viewport width
+// Calculate exact fit-width scale based on container width
 async function calculateFitWidthScale() {
   if (!pdfDoc) return 1.0;
-  // Use viewport width for true full-width
+  // Use content area width for true full-width
+  const container = document.getElementById("pdfContentArea");
+  if (!container) return 1.0;
+  
   const page = await pdfDoc.getPage(1);
   const viewport = page.getViewport({ scale: 1.0 });
-  return window.innerWidth / viewport.width;
+  return container.clientWidth / viewport.width;
 }
 
 async function renderAllPages() {
@@ -248,9 +253,9 @@ function pdfZoomOut() {
 }
 
 function pdfToggleFullscreen() {
-  const container = document.querySelector(".pdf-content-area");
+  const viewer = document.getElementById("pdfViewer");
   if (!pdfIsFullscreen) {
-    container.requestFullscreen().catch(() => {});
+    viewer.requestFullscreen().catch(() => {});
     pdfIsFullscreen = true;
   } else {
     document.exitFullscreen().catch(() => {});
@@ -401,7 +406,18 @@ async function initTeacher() {
 
 // ===== Boot =====
 
+let resizeTimeout = null;
+function debouncedReRender() {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    if (pdfDoc) {
+      reRenderAllPages();
+    }
+  }, 150);
+}
+
 (async function init() {
+  window.addEventListener("resize", debouncedReRender);
   if (isTeacher()) {
     try {
       await initTeacher();
