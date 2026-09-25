@@ -53,12 +53,18 @@ async function loadPdfUrl(presentationId) {
   const cached = sessionStorage.getItem(cacheKey);
   if (cached) {
     const { url, expires } = JSON.parse(cached);
-    if (Date.now() < expires) return url;
+    if (Date.now() < expires) {
+      console.log(`[PDF] Cache hit for ${presentationId}`);
+      return url;
+    }
   }
   // Fetch the pdf_path from the session data (already in activeSession.pdf_path)
   const pdfPath = activeSession?.pdf_path;
   if (!pdfPath) throw new Error("No PDF path available");
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/presentations/${encodeURIComponent(pdfPath)}`, {
+  console.log(`[PDF] Generating signed URL for: ${pdfPath}`);
+  const signUrl = `${SUPABASE_URL}/storage/v1/object/sign/presentations/${encodeURIComponent(pdfPath)}`;
+  console.log(`[PDF] POST ${signUrl}`);
+  const res = await fetch(signUrl, {
     method: "POST",
     headers: {
       apikey: SUPABASE_ANON_KEY,
@@ -67,9 +73,17 @@ async function loadPdfUrl(presentationId) {
     },
     body: JSON.stringify({ expiresIn: 3600 }),
   });
-  if (!res.ok) throw new Error(`Signed URL fetch failed (${res.status})`);
+  console.log(`[PDF] Response status: ${res.status}`);
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error(`[PDF] Signed URL fetch failed (${res.status}):`, errText);
+    throw new Error(`Signed URL fetch failed (${res.status}): ${errText}`);
+  }
   const data = await res.json();
-  const url = `${SUPABASE_URL}/storage/v1${data.signedURL}`;
+  console.log(`[PDF] Response data:`, data);
+  // data.signedURL is like "/storage/v1/object/sign/..." - DO NOT prepend /storage/v1
+  const url = `${SUPABASE_URL}${data.signedURL}`;
+  console.log(`[PDF] Final signed URL: ${url}`);
   sessionStorage.setItem(cacheKey, JSON.stringify({ url, expires: Date.now() + PDF_URL_TTL_MS }));
   return url;
 }
@@ -82,17 +96,22 @@ async function showPdf(presentationId, pdfPath) {
   frame.classList.add("hidden");
   error.classList.add("hidden");
   try {
+    console.log(`[PDF] Loading PDF for presentation: ${presentationId}`);
     const url = await loadPdfUrl(presentationId);
+    console.log(`[PDF] Setting iframe src`);
     frame.src = url;
     frame.onload = () => {
+      console.log(`[PDF] iframe loaded successfully`);
       loading.classList.add("hidden");
       frame.classList.remove("hidden");
     };
-    frame.onerror = () => {
+    frame.onerror = (e) => {
+      console.error(`[PDF] iframe onerror:`, e);
       loading.classList.add("hidden");
       error.classList.remove("hidden");
     };
-  } catch {
+  } catch (err) {
+    console.error(`[PDF] showPdf error:`, err);
     loading.classList.add("hidden");
     error.classList.remove("hidden");
   }
