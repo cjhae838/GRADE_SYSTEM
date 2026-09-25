@@ -4,6 +4,7 @@
 // Student mode: ?room=CODE, polls get_active_session for the current presentation.
 
 const POLL_INTERVAL_MS = 4000;
+const PDF_URL_TTL_MS = 55 * 60 * 1000; // 55 min buffer before 1hr signed URL expiry
 
 let activeSession = null;
 let studentPoll = null;
@@ -24,7 +25,7 @@ function switchTab(tab, btn) {
   document.getElementById("panel-" + tab).classList.add("active");
 }
 
-function setPresentation(title) {
+function setPresentation(title, presentationId, pdfPath) {
   if (title) {
     document.getElementById("viewerTitle").textContent = title;
   } else {
@@ -33,6 +34,71 @@ function setPresentation(title) {
   // initial view is the Documentation (PDF) tab
   const docsTab = document.querySelector(".viewer-tab[data-tab='docs']");
   if (docsTab) switchTab("docs", docsTab);
+  // Load PDF if we have a presentation ID and path
+  if (presentationId && pdfPath) {
+    showPdf(presentationId, pdfPath);
+  } else {
+    hidePdf();
+  }
+}
+
+function hidePdf() {
+  document.getElementById("pdfFrame").classList.add("hidden");
+  document.getElementById("pdfLoading").classList.add("hidden");
+  document.getElementById("pdfError").classList.add("hidden");
+}
+
+async function loadPdfUrl(presentationId) {
+  const cacheKey = `pdf_url_${presentationId}`;
+  const cached = sessionStorage.getItem(cacheKey);
+  if (cached) {
+    const { url, expires } = JSON.parse(cached);
+    if (Date.now() < expires) return url;
+  }
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_pdf_signed_url`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ presentation_id: presentationId }),
+  });
+  if (!res.ok) throw new Error(`Signed URL fetch failed (${res.status})`);
+  const data = await res.json();
+  const url = data[0]?.signed_url || data.signed_url;
+  sessionStorage.setItem(cacheKey, JSON.stringify({ url, expires: Date.now() + PDF_URL_TTL_MS }));
+  return url;
+}
+
+async function showPdf(presentationId, pdfPath) {
+  const frame = document.getElementById("pdfFrame");
+  const loading = document.getElementById("pdfLoading");
+  const error = document.getElementById("pdfError");
+  loading.classList.remove("hidden");
+  frame.classList.add("hidden");
+  error.classList.add("hidden");
+  try {
+    const url = await loadPdfUrl(presentationId);
+    frame.src = url;
+    frame.onload = () => {
+      loading.classList.add("hidden");
+      frame.classList.remove("hidden");
+    };
+    frame.onerror = () => {
+      loading.classList.add("hidden");
+      error.classList.remove("hidden");
+    };
+  } catch {
+    loading.classList.add("hidden");
+    error.classList.remove("hidden");
+  }
+}
+
+function retryPdf() {
+  if (activeSession?.current_presentation_id && activeSession?.pdf_path) {
+    showPdf(activeSession.current_presentation_id, activeSession.pdf_path);
+  }
 }
 
 // ===== Teacher mode =====
@@ -66,10 +132,10 @@ async function renderTeacherSession() {
   if (activeSession.current_presentation_id) {
     picker.value = activeSession.current_presentation_id;
     const current = rows.find((p) => p.id === activeSession.current_presentation_id);
-    setPresentation(current ? current.title : "");
+    setPresentation(current ? current.title : "", current ? current.id : null, current ? current.pdf_path : null);
     document.getElementById("pickerHint").textContent = "Switch presentation anytime.";
   } else {
-    setPresentation("");
+    setPresentation("", null, null);
     document.getElementById("pickerHint").textContent =
       "Choose a presentation to display to students.";
   }
@@ -124,10 +190,10 @@ async function pollActiveSession() {
       showSessionEnded();
       return;
     }
-    if (session.current_presentation_id !== activeSession.current_presentation_id || session.presentation_title !== activeSession.presentation_title) {
-      activeSession = session;
-      setPresentation(session.presentation_title);
-    }
+    const changed = session.current_presentation_id !== activeSession.current_presentation_id ||
+                    session.presentation_title !== activeSession.presentation_title;
+    activeSession = session;
+    setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path);
   } catch {
     // transient network error, keep polling
   }
@@ -149,6 +215,7 @@ function initStudent() {
   activeSession = { room_code: room, current_presentation_id: null, presentation_title: null };
   setPresentation("");
   studentPoll = setInterval(pollActiveSession, POLL_INTERVAL_MS);
+  // Initial poll to load presentation and PDF immediately
   pollActiveSession();
 }
 
