@@ -1,5 +1,6 @@
 -- ===== Milestone 7: PDF Viewer =====
 -- Extend get_active_session to return pdf_path for the current presentation
+drop function if exists get_active_session(text);
 create or replace function get_active_session(code text)
 returns table (
   id uuid,
@@ -18,16 +19,7 @@ language sql stable security definer as $$
   limit 1
 $$;
 
--- Signed URL generator (callable by anon)
--- Returns a 1-hour signed URL for the given presentation's PDF
-create or replace function get_pdf_signed_url(presentation_id uuid)
-returns text language sql security definer as $$
-  select storage.create_signed_url(
-    'presentations',
-    (select pdf_path from presentations where id = presentation_id),
-    3600  -- 1 hour expiry
-  ) as signed_url;
-$$;
-
-revoke all on function get_pdf_signed_url(uuid) from public;
-grant execute on function get_pdf_signed_url(uuid) to anon;
+-- Note: storage.create_signed_url() not available in this Supabase version.
+-- Signed URLs will be generated client-side via the Storage REST API:
+-- POST ${SUPABASE_URL}/storage/v1/object/sign/presentations/${pdf_path}
+-- with body: {"expiresIn": 3600}

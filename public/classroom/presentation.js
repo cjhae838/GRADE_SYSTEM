@@ -55,18 +55,21 @@ async function loadPdfUrl(presentationId) {
     const { url, expires } = JSON.parse(cached);
     if (Date.now() < expires) return url;
   }
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_pdf_signed_url`, {
+  // Fetch the pdf_path from the session data (already in activeSession.pdf_path)
+  const pdfPath = activeSession?.pdf_path;
+  if (!pdfPath) throw new Error("No PDF path available");
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/presentations/${encodeURIComponent(pdfPath)}`, {
     method: "POST",
     headers: {
       apikey: SUPABASE_ANON_KEY,
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ presentation_id: presentationId }),
+    body: JSON.stringify({ expiresIn: 3600 }),
   });
   if (!res.ok) throw new Error(`Signed URL fetch failed (${res.status})`);
   const data = await res.json();
-  const url = data[0]?.signed_url || data.signed_url;
+  const url = `${SUPABASE_URL}/storage/v1${data.signedURL}`;
   sessionStorage.setItem(cacheKey, JSON.stringify({ url, expires: Date.now() + PDF_URL_TTL_MS }));
   return url;
 }
