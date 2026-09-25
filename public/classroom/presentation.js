@@ -13,18 +13,6 @@ let pdfDoc = null;
 let pdfScale = 1.0; // 1.0 = fit-width, >1 = zoom in, <1 = zoom out
 let pdfIsFullscreen = false;
 
-// Debounced resize handler for fit-width recalculation
-let resizeTimeout = null;
-function debouncedResize() {
-  clearTimeout(resizeTimeout);
-  resizeTimeout = setTimeout(() => {
-    if (pdfDoc) {
-      console.log("[PDF] Window resized, re-rendering at fit-width");
-      renderAllPages();
-    }
-  }, 150);
-}
-
 function isTeacher() {
   return !!localStorage.getItem("admin_account");
 }
@@ -65,14 +53,10 @@ function hidePdf() {
     pdfDoc = null;
   }
   pdfScale = 1.0;
-  // Remove resize listener
-  window.removeEventListener("resize", debouncedResize);
   // Hide all PDF-related elements and clear canvases
   document.getElementById("pdfViewer").classList.add("hidden");
   document.getElementById("pdfLoading").classList.add("hidden");
   document.getElementById("pdfError").classList.add("hidden");
-  document.getElementById("pdfToolbar").classList.add("hidden");
-  document.getElementById("pdfToolbar").classList.remove("visible");
   const container = document.getElementById("pdfContentArea");
   if (container) container.innerHTML = "";
   updatePdfToolbar();
@@ -116,13 +100,10 @@ async function showPdf(presentationId, pdfPath, pdfPublicUrl) {
   const loading = document.getElementById("pdfLoading");
   const error = document.getElementById("pdfError");
   const viewer = document.getElementById("pdfViewer");
-  const toolbar = document.getElementById("pdfToolbar");
   
   loading.classList.remove("hidden");
   viewer.classList.add("hidden");
   error.classList.add("hidden");
-  toolbar.classList.remove("hidden");
-  toolbar.classList.remove("visible");
   
   // Reset PDF state
   if (pdfDoc) {
@@ -152,18 +133,10 @@ async function showPdf(presentationId, pdfPath, pdfPublicUrl) {
     // Render all pages at fit-width
     await renderAllPages();
     
-    // Show viewer and toolbar
+    // Show viewer
     loading.classList.add("hidden");
     viewer.classList.remove("hidden");
-    toolbar.classList.remove("hidden");
-    // Force reflow then show toolbar
-    requestAnimationFrame(() => {
-      toolbar.classList.add("visible");
-    });
     updatePdfToolbar();
-    
-    // Add resize handler for fit-width recalculation
-    window.addEventListener("resize", debouncedResize);
     
   } catch (err) {
     console.error(`[PDF] showPdf error:`, err);
@@ -275,9 +248,9 @@ function pdfZoomOut() {
 }
 
 function pdfToggleFullscreen() {
-  const viewer = document.getElementById("pdfViewer");
+  const container = document.querySelector(".pdf-content-area");
   if (!pdfIsFullscreen) {
-    viewer.requestFullscreen().catch(() => {});
+    container.requestFullscreen().catch(() => {});
     pdfIsFullscreen = true;
   } else {
     document.exitFullscreen().catch(() => {});
