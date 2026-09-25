@@ -271,7 +271,10 @@ async function renderTeacherSession() {
   if (activeSession.current_presentation_id) {
     picker.value = activeSession.current_presentation_id;
     const current = rows.find((p) => p.id === activeSession.current_presentation_id);
-    setPresentation(current ? current.title : "", current ? current.id : null, current ? current.pdf_path : null, activeSession.pdf_public_url);
+    const pdfPublicUrl = current?.pdf_path
+      ? `https://ruiikjyiqsfrzwqymixs.supabase.co/storage/v1/object/public/presentations/${current.pdf_path}`
+      : null;
+    setPresentation(current ? current.title : "", current ? current.id : null, current ? current.pdf_path : null, pdfPublicUrl);
     document.getElementById("pickerHint").textContent = "Switch presentation anytime.";
   } else {
     setPresentation("", null, null, null);
