@@ -608,31 +608,30 @@ body {
 
 /* ===== PDF Viewer ===== */
 .pdf-viewer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   background: var(--surface);
-  z-index: 50;
-  padding-top: 60px; /* toolbar height */
-  border-radius: 0;
+  border-radius: var(--radius);
   overflow: hidden;
 }
 
 .pdf-toolbar-fixed {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 100;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 10px 16px;
   background: var(--bg);
-  border-bottom: 1px solid var(--shadow-dark);
+  border-top: 1px solid var(--shadow-dark);
+  border-radius: var(--radius) var(--radius) 0 0;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
   flex-wrap: wrap;
 }
 
@@ -686,7 +685,7 @@ body {
   flex: 1;
 }
 
-/* Content area - fills viewport, centers canvases horizontally */
+/* Content area - fills remaining space, centers canvases horizontally */
 .pdf-content-area {
   flex: 1;
   min-height: 0;
@@ -716,15 +715,15 @@ body {
 
 /* Fullscreen styles */
 .pdf-viewer:fullscreen {
-  background: black;
-  border-radius: 0;
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 9999;
-  padding-top: 60px;
+  background: black;
+  border-radius: 0;
+  padding: 0;
 }
 
 .pdf-content-area:fullscreen {
@@ -739,6 +738,13 @@ body {
   }
   .pdf-page-canvas {
     margin-bottom: 8px;
+  }
+  .pdf-toolbar-fixed {
+    padding: 8px 12px;
+  }
+  .pdf-btn {
+    width: 40px;
+    height: 40px;
   }
 }
 
