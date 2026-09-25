@@ -66,7 +66,7 @@ async function loadPdfBlob(publicUrl) {
   console.log(`[PDF] Fetching PDF blob from public URL`);
   const res = await fetch(publicUrl);
   if (!res.ok) throw new Error(`PDF fetch failed (${res.status})`);
-  return res.blob();
+  return res.arrayBuffer();
 }
 
 // Lazy-load PDF.js from CDN
