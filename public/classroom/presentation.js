@@ -60,7 +60,8 @@ async function loadPdfUrl(presentationId, pdfPath) {
   }
   if (!pdfPath) throw new Error("No PDF path available");
   console.log(`[PDF] Generating signed URL for: ${pdfPath}`);
-  const signUrl = `${SUPABASE_URL}/storage/v1/object/sign/presentations/${encodeURIComponent(pdfPath)}`;
+  // Don't encode the full path - Supabase expects literal '/' separators
+  const signUrl = `${SUPABASE_URL}/storage/v1/object/sign/presentations/${pdfPath}`;
   console.log(`[PDF] POST ${signUrl}`);
   const res = await fetch(signUrl, {
     method: "POST",
