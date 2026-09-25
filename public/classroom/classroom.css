@@ -681,19 +681,27 @@ body {
 
 .pdf-canvas-container {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
   background: var(--bg);
-  overflow: auto;
-  padding: 24px;
+  padding: 0;
 }
 
-#pdfCanvas {
+.pdf-page-canvas {
+  width: 100%;
+  height: auto;
+  max-width: none;
   box-shadow: var(--neo-inset-sm);
   background: white;
-  max-width: 100%;
-  height: auto;
+  margin-bottom: 8px;
+}
+
+.pdf-page-canvas:last-child {
+  margin-bottom: 0;
 }
 
 /* Fullscreen styles */
@@ -702,10 +710,10 @@ body {
   padding: 0;
 }
 
-.pdf-canvas-container:fullscreen #pdfCanvas {
+.pdf-canvas-container:fullscreen .pdf-page-canvas {
   box-shadow: none;
   max-width: 100%;
-  height: 100vh;
+  height: auto;
   width: 100%;
   object-fit: contain;
 }

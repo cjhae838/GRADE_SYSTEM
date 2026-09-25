@@ -10,8 +10,7 @@ let studentPoll = null;
 
 // PDF.js state
 let pdfDoc = null;
-let pdfPageNum = 1;
-let pdfScale = 1.0;
+let pdfScale = 1.0; // 1.0 = fit-width, >1 = zoom in, <1 = zoom out
 let pdfIsFullscreen = false;
 
 function isTeacher() {
@@ -53,12 +52,13 @@ function hidePdf() {
     pdfDoc.destroy();
     pdfDoc = null;
   }
-  pdfPageNum = 1;
   pdfScale = 1.0;
-  // Hide all PDF-related elements
+  // Hide all PDF-related elements and clear canvases
   document.getElementById("pdfViewer").classList.add("hidden");
   document.getElementById("pdfLoading").classList.add("hidden");
   document.getElementById("pdfError").classList.add("hidden");
+  const container = document.getElementById("pdfCanvasContainer");
+  if (container) container.innerHTML = "";
   updatePdfToolbar();
 }
 
@@ -100,15 +100,12 @@ async function showPdf(presentationId, pdfPath, pdfPublicUrl) {
   const loading = document.getElementById("pdfLoading");
   const error = document.getElementById("pdfError");
   const viewer = document.getElementById("pdfViewer");
-  const canvas = document.getElementById("pdfCanvas");
   
   loading.classList.remove("hidden");
   viewer.classList.add("hidden");
   error.classList.add("hidden");
   
   // Reset PDF state
-  pdfPageNum = 1;
-  pdfScale = 1.0;
   if (pdfDoc) {
     pdfDoc.destroy();
     pdfDoc = null;
@@ -132,8 +129,8 @@ async function showPdf(presentationId, pdfPath, pdfPublicUrl) {
     pdfDoc = await pdfjsLib.getDocument({ data: blob }).promise;
     console.log(`[PDF] PDF loaded, ${pdfDoc.numPages} pages`);
     
-    // Render first page
-    await renderPdfPage(pdfPageNum, canvas);
+    // Render all pages as stacked canvases
+    await renderAllPages();
     
     // Show viewer
     loading.classList.add("hidden");
@@ -147,79 +144,95 @@ async function showPdf(presentationId, pdfPath, pdfPublicUrl) {
   }
 }
 
-async function renderPdfPage(pageNum, canvas) {
+// Calculate fit-width scale based on container width
+async function calculateFitWidthScale() {
+  if (!pdfDoc) return 1.0;
+  const container = document.querySelector(".pdf-canvas-container");
+  if (!container) return 1.0;
+  
+  const page = await pdfDoc.getPage(1);
+  const viewport = page.getViewport({ scale: 1.0 });
+  return container.clientWidth / viewport.width;
+}
+
+async function renderAllPages() {
   if (!pdfDoc) return;
   
-  const page = await pdfDoc.getPage(pageNum);
-  const viewport = page.getViewport({ scale: pdfScale });
+  const container = document.querySelector(".pdf-canvas-container");
+  if (!container) return;
   
-  // Set canvas size
-  const context = canvas.getContext('2d');
-  canvas.width = viewport.width;
-  canvas.height = viewport.height;
+  const fitWidthScale = await calculateFitWidthScale();
+  const baseScale = fitWidthScale * pdfScale;
   
-  // Render page
-  await page.render({
-    canvasContext: context,
-    viewport: viewport
-  }).promise;
+  console.log(`[PDF] Rendering ${pdfDoc.numPages} pages at scale ${baseScale.toFixed(2)} (fitWidth: ${fitWidthScale.toFixed(2)}, zoom: ${pdfScale.toFixed(2)})`);
   
+  // Clear existing canvases
+  const containerEl = document.getElementById("pdfCanvasContainer");
+  if (!containerEl) return;
+  containerEl.innerHTML = "";
+  
+  // Render each page to its own canvas, stacked vertically
+  for (let i = 1; i <= pdfDoc.numPages; i++) {
+    const page = await pdfDoc.getPage(i);
+    const viewport = page.getViewport({ scale: baseScale });
+    
+    // Create canvas for this page
+    const canvas = document.createElement("canvas");
+    canvas.className = "pdf-page-canvas";
+    const context = canvas.getContext("2d");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    
+    // Render page to canvas
+    await page.render({
+      canvasContext: context,
+      viewport: viewport
+    }).promise;
+    
+    containerEl.appendChild(canvas);
+  }
+  
+  console.log(`[PDF] Rendered ${pdfDoc.numPages} canvases`);
   updatePdfToolbar();
 }
 
+async function reRenderAllPages() {
+  // Destroy existing canvases and re-render at new scale
+  const containerEl = document.getElementById("pdfCanvasContainer");
+  if (containerEl) containerEl.innerHTML = "";
+  await renderAllPages();
+}
+
 function updatePdfToolbar() {
-  const pageInfo = document.getElementById("pdfPageInfo");
   const zoomLevel = document.getElementById("pdfZoomLevel");
-  const prevBtn = document.getElementById("pdfPrevBtn");
-  const nextBtn = document.getElementById("pdfNextBtn");
   const zoomOutBtn = document.getElementById("pdfZoomOutBtn");
   const zoomInBtn = document.getElementById("pdfZoomInBtn");
   const fullscreenBtn = document.getElementById("pdfFullscreenBtn");
   
   if (pdfDoc) {
-    pageInfo.textContent = `Page ${pdfPageNum} of ${pdfDoc.numPages}`;
     zoomLevel.textContent = `${Math.round(pdfScale * 100)}%`;
-    prevBtn.disabled = pdfPageNum <= 1;
-    nextBtn.disabled = pdfPageNum >= pdfDoc.numPages;
     zoomOutBtn.disabled = false;
     zoomInBtn.disabled = false;
     fullscreenBtn.disabled = false;
   } else {
-    pageInfo.textContent = "Page 1 of 1";
     zoomLevel.textContent = "100%";
-    prevBtn.disabled = true;
-    nextBtn.disabled = true;
     zoomOutBtn.disabled = true;
     zoomInBtn.disabled = true;
     fullscreenBtn.disabled = true;
   }
 }
 
-async function pdfPrevPage() {
-  if (pdfPageNum > 1) {
-    pdfPageNum--;
-    await renderPdfPage(pdfPageNum, document.getElementById("pdfCanvas"));
-  }
-}
-
-async function pdfNextPage() {
-  if (pdfDoc && pdfPageNum < pdfDoc.numPages) {
-    pdfPageNum++;
-    await renderPdfPage(pdfPageNum, document.getElementById("pdfCanvas"));
-  }
-}
-
 function pdfZoomIn() {
   if (pdfScale < 3.0) {
     pdfScale = Math.min(3.0, pdfScale + 0.25);
-    renderPdfPage(pdfPageNum, document.getElementById("pdfCanvas"));
+    reRenderAllPages();
   }
 }
 
 function pdfZoomOut() {
   if (pdfScale > 0.5) {
     pdfScale = Math.max(0.5, pdfScale - 0.25);
-    renderPdfPage(pdfPageNum, document.getElementById("pdfCanvas"));
+    reRenderAllPages();
   }
 }
 
