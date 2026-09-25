@@ -48,7 +48,7 @@ function hidePdf() {
   document.getElementById("pdfError").classList.add("hidden");
 }
 
-async function loadPdfUrl(presentationId) {
+async function loadPdfUrl(presentationId, pdfPath) {
   const cacheKey = `pdf_url_${presentationId}`;
   const cached = sessionStorage.getItem(cacheKey);
   if (cached) {
@@ -58,8 +58,6 @@ async function loadPdfUrl(presentationId) {
       return url;
     }
   }
-  // Fetch the pdf_path from the session data (already in activeSession.pdf_path)
-  const pdfPath = activeSession?.pdf_path;
   if (!pdfPath) throw new Error("No PDF path available");
   console.log(`[PDF] Generating signed URL for: ${pdfPath}`);
   const signUrl = `${SUPABASE_URL}/storage/v1/object/sign/presentations/${encodeURIComponent(pdfPath)}`;
@@ -96,8 +94,8 @@ async function showPdf(presentationId, pdfPath) {
   frame.classList.add("hidden");
   error.classList.add("hidden");
   try {
-    console.log(`[PDF] Loading PDF for presentation: ${presentationId}`);
-    const url = await loadPdfUrl(presentationId);
+    console.log(`[PDF] Loading PDF for presentation: ${presentationId}, path: ${pdfPath}`);
+    const url = await loadPdfUrl(presentationId, pdfPath);
     console.log(`[PDF] Setting iframe src`);
     frame.src = url;
     frame.onload = () => {
