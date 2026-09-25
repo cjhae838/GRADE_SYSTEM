@@ -10,7 +10,6 @@ let studentPoll = null;
 
 // PDF.js state
 let pdfDoc = null;
-let pdfScale = 1.0; // 1.0 = fit-width, >1 = zoom in, <1 = zoom out
 let pdfIsFullscreen = false;
 
 function isTeacher() {
@@ -52,7 +51,6 @@ function hidePdf() {
     pdfDoc.destroy();
     pdfDoc = null;
   }
-  pdfScale = 1.0;
   // Hide all PDF-related elements and clear canvases
   document.getElementById("pdfViewer").classList.add("hidden");
   document.getElementById("pdfLoading").classList.add("hidden");
@@ -129,7 +127,7 @@ async function showPdf(presentationId, pdfPath, pdfPublicUrl) {
     pdfDoc = await pdfjsLib.getDocument({ data: blob }).promise;
     console.log(`[PDF] PDF loaded, ${pdfDoc.numPages} pages`);
     
-    // Render all pages as stacked canvases
+    // Render all pages at fit-width
     await renderAllPages();
     
     // Show viewer
@@ -144,7 +142,7 @@ async function showPdf(presentationId, pdfPath, pdfPublicUrl) {
   }
 }
 
-// Calculate fit-width scale based on container width
+// Calculate exact fit-width scale based on container width
 async function calculateFitWidthScale() {
   if (!pdfDoc) return 1.0;
   const container = document.querySelector(".pdf-canvas-container");
@@ -161,27 +159,43 @@ async function renderAllPages() {
   const container = document.querySelector(".pdf-canvas-container");
   if (!container) return;
   
-  const fitWidthScale = await calculateFitWidthScale();
-  const baseScale = fitWidthScale * pdfScale;
+  const scale = await calculateFitWidthScale();
   
-  console.log(`[PDF] Rendering ${pdfDoc.numPages} pages at scale ${baseScale.toFixed(2)} (fitWidth: ${fitWidthScale.toFixed(2)}, zoom: ${pdfScale.toFixed(2)})`);
+  console.log(`[PDF] Rendering ${pdfDoc.numPages} pages at fit-width scale ${scale.toFixed(3)}`);
   
   // Clear existing canvases
   const containerEl = document.getElementById("pdfCanvasContainer");
   if (!containerEl) return;
   containerEl.innerHTML = "";
   
-  // Render each page to its own canvas, stacked vertically
+  // Get all page viewports at fit-width scale
+  const viewports = [];
   for (let i = 1; i <= pdfDoc.numPages; i++) {
     const page = await pdfDoc.getPage(i);
-    const viewport = page.getViewport({ scale: baseScale });
+    const viewport = page.getViewport({ scale });
+    viewports.push(viewport);
+  }
+  
+  // Create canvas for each page at exact fit-width with high-DPI support
+  const dpr = window.devicePixelRatio || 1;
+  
+  for (let i = 0; i < viewports.length; i++) {
+    const page = await pdfDoc.getPage(i + 1);
+    const viewport = viewports[i];
     
     // Create canvas for this page
     const canvas = document.createElement("canvas");
     canvas.className = "pdf-page-canvas";
     const context = canvas.getContext("2d");
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
+    
+    // Set canvas size for high-DPI rendering
+    canvas.width = viewport.width * dpr;
+    canvas.height = viewport.height * dpr;
+    canvas.style.width = viewport.width + "px";
+    canvas.style.height = viewport.height + "px";
+    
+    // Scale context for high-DPI
+    context.scale(dpr, dpr);
     
     // Render page to canvas
     await page.render({
@@ -192,47 +206,17 @@ async function renderAllPages() {
     containerEl.appendChild(canvas);
   }
   
-  console.log(`[PDF] Rendered ${pdfDoc.numPages} canvases`);
+  console.log(`[PDF] Rendered ${pdfDoc.numPages} canvases at fit-width`);
   updatePdfToolbar();
 }
 
-async function reRenderAllPages() {
-  // Destroy existing canvases and re-render at new scale
-  const containerEl = document.getElementById("pdfCanvasContainer");
-  if (containerEl) containerEl.innerHTML = "";
-  await renderAllPages();
-}
-
 function updatePdfToolbar() {
-  const zoomLevel = document.getElementById("pdfZoomLevel");
-  const zoomOutBtn = document.getElementById("pdfZoomOutBtn");
-  const zoomInBtn = document.getElementById("pdfZoomInBtn");
   const fullscreenBtn = document.getElementById("pdfFullscreenBtn");
   
   if (pdfDoc) {
-    zoomLevel.textContent = `${Math.round(pdfScale * 100)}%`;
-    zoomOutBtn.disabled = false;
-    zoomInBtn.disabled = false;
     fullscreenBtn.disabled = false;
   } else {
-    zoomLevel.textContent = "100%";
-    zoomOutBtn.disabled = true;
-    zoomInBtn.disabled = true;
     fullscreenBtn.disabled = true;
-  }
-}
-
-function pdfZoomIn() {
-  if (pdfScale < 3.0) {
-    pdfScale = Math.min(3.0, pdfScale + 0.25);
-    reRenderAllPages();
-  }
-}
-
-function pdfZoomOut() {
-  if (pdfScale > 0.5) {
-    pdfScale = Math.max(0.5, pdfScale - 0.25);
-    reRenderAllPages();
   }
 }
 

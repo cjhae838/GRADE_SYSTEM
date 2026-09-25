@@ -657,24 +657,6 @@ body {
   height: 18px;
 }
 
-.pdf-page-info {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--text);
-  margin: 0 8px;
-  min-width: 100px;
-  text-align: center;
-}
-
-.pdf-zoom-level {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--text);
-  margin: 0 8px;
-  min-width: 50px;
-  text-align: center;
-}
-
 .pdf-toolbar-spacer {
   flex: 1;
 }
@@ -716,6 +698,16 @@ body {
   height: auto;
   width: 100%;
   object-fit: contain;
+}
+
+/* Mobile touch scrolling */
+@media (max-width: 768px) {
+  .pdf-canvas-container {
+    -webkit-overflow-scrolling: touch;
+  }
+  .pdf-page-canvas {
+    margin-bottom: 4px;
+  }
 }
 
 .classroom-modal-card {
