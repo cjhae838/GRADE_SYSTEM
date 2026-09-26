@@ -1,12 +1,13 @@
 // ===== Presentation Viewer / Session Control =====
 // Depends on classroom.js.
 // Teacher mode: requires an active session (loads or redirects to dashboard).
-// Student mode: ?room=CODE, polls get_active_session for the current presentation.
+// Student mode: uses Supabase Realtime for instant presentation updates.
 
-const POLL_INTERVAL_MS = 4000;
+// Initialize Supabase client for Realtime
+const supabase = window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let realtimeChannel = null;
 
 let activeSession = null;
-let studentPoll = null;
 
 // PDF.js state
 let pdfDoc = null;
@@ -18,7 +19,7 @@ function isTeacher() {
 }
 
 function showSessionEnded() {
-  if (studentPoll) { clearInterval(studentPoll); studentPoll = null; }
+  if (realtimeChannel) { realtimeChannel.unsubscribe(); realtimeChannel = null; }
   document.getElementById("sessionEnded").classList.remove("hidden");
 }
 
@@ -128,14 +129,14 @@ async function showPdf(presentationId, pdfPath, pdfPublicUrl) {
     const blob = await loadPdfBlob(url);
     
     // Load PDF document
-pdfDoc = await pdfjsLib.getDocument({ data: blob }).promise;
-  console.log(`[PDF] PDF loaded, ${pdfDoc.numPages} pages`);
-  
-  // Initialize fit-width scale
-  await initializeFitWidth();
-  
-  // Render all pages at fit-width
-  await renderAllPages();
+    pdfDoc = await pdfjsLib.getDocument({ data: blob }).promise;
+    console.log(`[PDF] PDF loaded, ${pdfDoc.numPages} pages`);
+    
+    // Initialize fit-width scale
+    await initializeFitWidth();
+    
+    // Render all pages at fit-width
+    await renderAllPages();
     
     // Show viewer
     loading.classList.add("hidden");
@@ -377,22 +378,14 @@ async function endSession() {
 
 // ===== Student mode =====
 
-async function pollActiveSession() {
+// Fetch initial session data on join
+async function fetchInitialSession(room) {
   try {
-    const session = await activeSessionByCode(activeSession.room_code);
-    if (!session) {
-      showSessionEnded();
-      return;
-    }
-    const changed = session.current_presentation_id !== activeSession.current_presentation_id ||
-                    session.presentation_title !== activeSession.presentation_title;
+    const session = await activeSessionByCode(room);
+    if (!session) { showSessionEnded(); return; }
     activeSession = session;
-    if (changed) {
-      setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path, session.pdf_public_url);
-    }
-  } catch {
-    // transient network error, keep polling
-  }
+    setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path, session.pdf_public_url);
+  } catch { showSessionEnded(); }
 }
 
 function initStudent() {
@@ -410,13 +403,44 @@ function initStudent() {
   document.getElementById("leaveRoomBtn").classList.remove("hidden");
   activeSession = { room_code: room, current_presentation_id: null, presentation_title: null };
   setPresentation("");
-  studentPoll = setInterval(pollActiveSession, POLL_INTERVAL_MS);
-  // Initial poll to load presentation and PDF immediately
-  pollActiveSession();
+  
+  // Fetch initial session data
+  fetchInitialSession(room);
+  
+  // Subscribe to Realtime updates for this session
+  realtimeChannel = supabase
+    .channel(`session:${room}`)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'sessions',
+      filter: `room_code=eq.${room}`
+    }, payload => {
+      const session = payload.new;
+      if (!session || session.status === 'ended') {
+        showSessionEnded();
+        return;
+      }
+      const changed = session.current_presentation_id !== activeSession.current_presentation_id ||
+                      session.presentation_title !== activeSession.presentation_title;
+      activeSession = session;
+      if (changed) setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path, session.pdf_public_url);
+    })
+    .subscribe();
 }
 
 function leaveRoom() {
-  if (studentPoll) { clearInterval(studentPoll); studentPoll = null; }
+  if (realtimeChannel) { realtimeChannel.unsubscribe(); realtimeChannel = null; }
+  window.location.href = "join.html";
+}
+
+function showSessionEnded() {
+  if (realtimeChannel) { realtimeChannel.unsubscribe(); realtimeChannel = null; }
+  document.getElementById("sessionEnded").classList.remove("hidden");
+}
+
+function leaveRoom() {
+  if (realtimeChannel) { realtimeChannel.unsubscribe(); realtimeChannel = null; }
   window.location.href = "join.html";
 }
 
