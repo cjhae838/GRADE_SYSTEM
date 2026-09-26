@@ -387,7 +387,9 @@ async function pollActiveSession() {
     const changed = session.current_presentation_id !== activeSession.current_presentation_id ||
                     session.presentation_title !== activeSession.presentation_title;
     activeSession = session;
-    setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path, session.pdf_public_url);
+    if (changed) {
+      setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path, session.pdf_public_url);
+    }
   } catch {
     // transient network error, keep polling
   }

@@ -1,6 +1,8 @@
 // ===== Admin Grades Page Logic =====
 // Handles session validation and grade management
 
+import { startInactivityTimer } from './inactivity-timer.js';
+
 // ===== DOM Elements =====
 const adminDashboard = document.getElementById("adminDashboard");
 const accountBadge = document.getElementById("accountBadge");
@@ -25,6 +27,17 @@ const addSectionModal = document.getElementById("addSectionModal");
 const newSectionInput = document.getElementById("newSectionInput");
 const addSectionStatus = document.getElementById("addSectionStatus");
 const loggingOutModal = document.getElementById("loggingOutModal");
+const sessionTimeoutModal = document.getElementById("sessionTimeoutModal");
+const sessionTimeoutConfirmBtn = document.getElementById("sessionTimeoutConfirmBtn");
+
+// Session timeout handler
+function showSessionTimeoutModal() {
+  sessionTimeoutModal.classList.remove("hidden");
+  // Auto-logout after 5 seconds
+  setTimeout(() => {
+    logout();
+  }, 5000);
+}
 
 // ===== Auth =====
 async function checkAuth() {
@@ -36,31 +49,24 @@ async function checkAuth() {
     return;
   }
 
-  const active = await isSessionActive(account);
-  if (active) {
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/admin_sessions?account_name=eq.${encodeURIComponent(account)}&select=session_token`,
-      {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-      }
-    );
-    if (response.ok) {
-      const data = await response.json();
-      if (data.length > 0 && data[0].session_token === token) {
-        await recordActivity(account);
-        showDashboard(account);
-        return;
-      }
-    }
+  await recordActivity(account);
+  showDashboard(account);
+
+  // Start 15-minute inactivity timer (clicks and scroll only)
+  if (!window.inactivityTimer) {
+    window.inactivityTimer = startInactivityTimer({
+      timeoutMs: 15 * 60 * 1000,  // 15 minutes exactly
+      onTimeout: showSessionTimeoutModal,
+      events: ['click', 'scroll']  // Only clicks and scroll
+    });
   }
-  clearSession();
-  window.location.href = "admin-a7x9k2.html";
 }
 
 async function logout() {
+  if (window.inactivityTimer) {
+    window.inactivityTimer.destroy();
+    window.inactivityTimer = null;
+  }
   loggingOutModal.classList.remove("hidden");
   const startTime = Date.now();
   const account = localStorage.getItem("admin_account");
@@ -848,6 +854,11 @@ function escapeHtml(str) {
   div.textContent = str;
   return div.innerHTML;
 }
+
+// Session timeout modal confirm handler
+sessionTimeoutConfirmBtn.addEventListener("click", () => {
+  logout();
+});
 
 // ===== Init =====
 checkAuth();
