@@ -369,6 +369,9 @@ body {
   margin-bottom: 16px;
   margin-top: 16px;
   border-radius: var(--radius-sm);
+  max-width: 90vw;
+  align-items: center;
+  margin: 16px auto;
 }
 
 .viewer-title {
@@ -746,7 +749,7 @@ body {
   }
   .pdf-toolbar-fixed {
     padding: 8px 12px;
-    width: 60vw;
+    width: 70vw;
   }
   .pdf-btn {
     width: 40px;
@@ -760,9 +763,9 @@ body {
   padding: 0;
 }
 
-.pdf-viewer {
-  overflow: visible;
-}
+/* .pdf-viewer {
+  overflow-x: auto;
+} */
 
 .classroom-modal-card {
   background: var(--surface);
