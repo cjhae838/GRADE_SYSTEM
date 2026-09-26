@@ -382,11 +382,17 @@ async function endSession() {
 // Fetch initial session data on join
 async function fetchInitialSession(room) {
   try {
+    console.log('[Realtime] Fetching initial session for room:', room);
     const session = await activeSessionByCode(room);
+    console.log('[Realtime] Initial session fetched:', session ? 'found' : 'null');
     if (!session) { showSessionEnded(); return; }
     activeSession = session;
+    console.log('[Realtime] Initial session loaded, presentation_id:', session.current_presentation_id);
     setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path, session.pdf_public_url);
-  } catch { showSessionEnded(); }
+  } catch (err) {
+    console.error('[Realtime] fetchInitialSession error:', err);
+    showSessionEnded();
+  }
 }
 
 function initStudent() {
@@ -419,11 +425,14 @@ function initStudent() {
       })
       // Listen for database-triggered broadcasts
       .on('broadcast', { event: '*' }, payload => {
+        console.log('[Realtime] Broadcast received:', JSON.stringify(payload, null, 2));
         // Database trigger sends: { new, old, op, ... }
         const session = payload.payload?.new;
         const op = payload.payload?.op; // 'INSERT', 'UPDATE', 'DELETE'
+        console.log('[Realtime] Broadcast op:', op, 'session:', session ? 'exists' : 'null');
         
         if (!session || session.status === 'ended') {
+          console.log('[Realtime] Session ended or null, showing ended');
           showSessionEnded();
           return;
         }
@@ -431,6 +440,8 @@ function initStudent() {
         const changed = session.current_presentation_id !== activeSession.current_presentation_id ||
                         session.presentation_title !== activeSession.presentation_title;
         activeSession = session;
+        
+        console.log('[Realtime] Session changed:', changed, 'presentation_id:', session.current_presentation_id);
         
         // Get presentation details for PDF
         if (session.current_presentation_id) {
@@ -448,6 +459,7 @@ function initStudent() {
         }
       })
       .subscribe((status, err) => {
+        console.log('[Realtime] Subscription status:', status, err ? err.message : '');
         if (status === 'SUBSCRIBED') {
           console.log(`[Realtime] Subscribed to room ${room}:sessions`);
           reconnectAttempts = 0; // Reset on success
@@ -483,11 +495,13 @@ function leaveRoom() {
 }
 
 function showSessionEnded() {
+  console.log('[Realtime] showSessionEnded called');
   if (realtimeChannel) { realtimeChannel.unsubscribe(); realtimeChannel = null; }
   document.getElementById("sessionEnded").classList.remove("hidden");
 }
 
 function leaveRoom() {
+  console.log('[Realtime] leaveRoom called');
   if (realtimeChannel) { realtimeChannel.unsubscribe(); realtimeChannel = null; }
   window.location.href = "join.html";
 }
