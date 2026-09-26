@@ -128,11 +128,14 @@ async function showPdf(presentationId, pdfPath, pdfPublicUrl) {
     const blob = await loadPdfBlob(url);
     
     // Load PDF document
-    pdfDoc = await pdfjsLib.getDocument({ data: blob }).promise;
-    console.log(`[PDF] PDF loaded, ${pdfDoc.numPages} pages`);
-    
-    // Render all pages at fit-width
-    await renderAllPages();
+pdfDoc = await pdfjsLib.getDocument({ data: blob }).promise;
+  console.log(`[PDF] PDF loaded, ${pdfDoc.numPages} pages`);
+  
+  // Initialize fit-width scale
+  await initializeFitWidth();
+  
+  // Render all pages at fit-width
+  await renderAllPages();
     
     // Show viewer
     loading.classList.add("hidden");
@@ -150,7 +153,6 @@ async function showPdf(presentationId, pdfPath, pdfPublicUrl) {
 // Calculate exact fit-width scale based on container width
 async function calculateFitWidthScale() {
   if (!pdfDoc) return 1.0;
-  // Use content area width for true full-width
   const container = document.getElementById("pdfContentArea");
   if (!container) return 1.0;
   
@@ -160,12 +162,21 @@ async function calculateFitWidthScale() {
   return containerWidth / viewport.width;
 }
 
+// Calculate and set initial fit-width scale
+async function initializeFitWidth() {
+  if (!pdfDoc) return;
+  const fitWidthScale = await calculateFitWidthScale();
+  pdfScale = fitWidthScale;
+  updatePdfToolbar();
+}
+
 async function renderAllPages() {
   if (!pdfDoc) return;
   
-  const scale = (await calculateFitWidthScale()) * pdfScale;
+  // Use pdfScale directly (no fit-width multiplication)
+  const scale = pdfScale;
   
-  console.log(`[PDF] Rendering ${pdfDoc.numPages} pages at scale ${scale.toFixed(3)} (fitWidth * zoom: ${pdfScale.toFixed(2)})`);
+  console.log(`[PDF] Rendering ${pdfDoc.numPages} pages at scale ${scale.toFixed(3)} (zoom: ${pdfScale.toFixed(2)})`);
   
   // Clear existing canvases
   const containerEl = document.getElementById("pdfContentArea");
@@ -176,7 +187,7 @@ async function renderAllPages() {
   const viewports = [];
   for (let i = 1; i <= pdfDoc.numPages; i++) {
     const page = await pdfDoc.getPage(i);
-    const viewport = page.getViewport({ scale });
+    const viewport = page.getViewport({ scale: pdfScale });
     viewports.push(viewport);
   }
   
@@ -185,7 +196,7 @@ async function renderAllPages() {
   
   for (let i = 0; i < viewports.length; i++) {
     const page = await pdfDoc.getPage(i + 1);
-    const viewport = viewports[i];
+    const viewport = await pdfDoc.getPage(i + 1).then(p => p.getViewport({ scale: pdfScale }));
     
     // Create canvas for this page
     const canvas = document.createElement("canvas");
@@ -210,7 +221,7 @@ async function renderAllPages() {
     document.getElementById("pdfContentArea").appendChild(canvas);
   }
   
-  console.log(`[PDF] Rendered ${pdfDoc.numPages} canvases at scale ${scale.toFixed(3)}`);
+  console.log(`[PDF] Rendered ${pdfDoc.numPages} canvases at scale ${pdfScale.toFixed(3)}`);
   updatePdfToolbar();
 }
 
@@ -224,32 +235,43 @@ function updatePdfToolbar() {
   const zoomLevel = document.getElementById("pdfZoomLevel");
   const zoomOutBtn = document.getElementById("pdfZoomOutBtn");
   const zoomInBtn = document.getElementById("pdfZoomInBtn");
+  const fitWidthBtn = document.getElementById("pdfFitWidthBtn");
   const fullscreenBtn = document.getElementById("pdfFullscreenBtn");
   
   if (pdfDoc) {
     zoomLevel.textContent = `${Math.round(pdfScale * 100)}%`;
-    zoomOutBtn.disabled = false;
-    zoomInBtn.disabled = false;
+    zoomOutBtn.disabled = pdfScale <= 0.25;
+    zoomInBtn.disabled = pdfScale >= 2.0;
+    fitWidthBtn.disabled = false;
     fullscreenBtn.disabled = false;
   } else {
     zoomLevel.textContent = "100%";
     zoomOutBtn.disabled = true;
     zoomInBtn.disabled = true;
+    fitWidthBtn.disabled = true;
     fullscreenBtn.disabled = true;
   }
 }
 
 function pdfZoomIn() {
-  if (pdfScale < 3.0) {
-    pdfScale = Math.min(3.0, pdfScale + 0.25);
+  if (pdfScale < 2.0) {
+    pdfScale = Math.min(2.0, pdfScale * 1.25);
     reRenderAllPages();
   }
 }
 
 function pdfZoomOut() {
-  if (pdfScale > 0.5) {
-    pdfScale = Math.max(0.5, pdfScale - 0.25);
+  if (pdfScale > 0.25) {
+    pdfScale = Math.max(0.25, pdfScale / 1.25);
     reRenderAllPages();
+  }
+}
+
+function pdfFitWidth() {
+  if (pdfDoc) {
+    initializeFitWidth().then(() => {
+      reRenderAllPages();
+    });
   }
 }
 

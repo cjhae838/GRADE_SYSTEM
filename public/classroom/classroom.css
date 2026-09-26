@@ -691,7 +691,7 @@ body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
   background: var(--bg);
   padding: 24px 24px 24px;
   display: flex;
@@ -702,7 +702,7 @@ body {
 
 .pdf-page-canvas {
   width: auto;
-  max-width: 100%;
+  max-width: none;
   height: auto;
   display: block;
   margin: 0 auto 16px;
