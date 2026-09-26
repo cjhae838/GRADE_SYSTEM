@@ -37,6 +37,23 @@ async function deleteSession(accountName) {
   }
 }
 
+async function endTeacherSessions(accountName) {
+  try {
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/sessions?teacher_id=eq.${encodeURIComponent(accountName)}&status=eq.active`,
+      {
+        method: "PATCH",
+        headers: teacherHeaders({
+          "Content-Type": "application/json",
+        }),
+        body: JSON.stringify({ status: "ended", ended_at: new Date().toISOString() }),
+      }
+    );
+  } catch {
+    // Ignore errors on logout
+  }
+}
+
 function clearSession() {
   localStorage.removeItem("admin_account");
   localStorage.removeItem(SESSION_TOKEN_KEY);
@@ -46,7 +63,10 @@ async function logout() {
   const loggingOutModal = document.getElementById("loggingOutModal");
   if (loggingOutModal) loggingOutModal.classList.remove("hidden");
   const account = getTeacherAccount();
-  if (account) await deleteSession(account);
+  if (account) {
+    await deleteSession(account);
+    await endTeacherSessions(account);
+  }
   clearSession();
   window.location.href = "../admin-a7x9k2.html";
 }

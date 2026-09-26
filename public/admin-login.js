@@ -98,6 +98,7 @@ async function logout() {
   const account = localStorage.getItem("admin_account");
   if (account) {
     await deleteSession(account);
+    await endTeacherSessions(account);
   }
   clearSession();
   const elapsed = Date.now() - startTime;

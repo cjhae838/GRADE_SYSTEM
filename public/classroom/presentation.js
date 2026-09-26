@@ -4,7 +4,7 @@
 // Student mode: uses Supabase Realtime for instant presentation updates.
 
 // Initialize Supabase client for Realtime
-const supabase = window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let realtimeChannel = null;
 
 let activeSession = null;
@@ -325,7 +325,7 @@ async function renderTeacherSession() {
     picker.value = activeSession.current_presentation_id;
     const current = rows.find((p) => p.id === activeSession.current_presentation_id);
     const pdfPublicUrl = current?.pdf_path
-      ? `https://ruiikjyiqsfrzwqymixs.supabase.co/storage/v1/object/public/presentations/${current.pdf_path}`
+      ? `https://ruiikjyiqsfrzwqymixs.supabaseClient.co/storage/v1/object/public/presentations/${current.pdf_path}`
       : null;
     setPresentation(current ? current.title : "", current ? current.id : null, current ? current.pdf_path : null, pdfPublicUrl);
     document.getElementById("pickerHint").textContent = "Switch presentation anytime.";
@@ -408,7 +408,7 @@ function initStudent() {
   fetchInitialSession(room);
   
   // Subscribe to Realtime updates for this session
-  realtimeChannel = supabase
+  realtimeChannel = supabaseClient
     .channel(`session:${room}`)
     .on('postgres_changes', {
       event: 'UPDATE',
