@@ -351,6 +351,26 @@ async function switchPresentation(id) {
   );
   if (!res.ok) throw new Error(`Failed to switch presentation (${res.status})`);
   activeSession = (await res.json())[0];
+
+  // Broadcast presentation switch to all students in the room
+  if (realtimeChannel) {
+    const current = activeSession.current_presentation_id
+      ? await listPresentations().then(rows => rows.find(p => p.id === activeSession.current_presentation_id))
+      : null;
+    if (current) {
+      realtimeChannel.send({
+        type: 'broadcast',
+        event: 'presentation_switch',
+        payload: {
+          presentation_id: current.id,
+          title: current.title,
+          pdf_path: current.pdf_path,
+          pdf_public_url: `https://ruiikjyiqsfrzwqymixs.supabase.co/storage/v1/object/public/presentations/${current.pdf_path}`
+        }
+      });
+    }
+  }
+
   await renderTeacherSession();
 }
 
@@ -368,6 +388,16 @@ async function endSession() {
       }
     );
     if (!res.ok) throw new Error(`Failed to end session (${res.status})`);
+
+    // Broadcast session ended to all students in the room
+    if (realtimeChannel) {
+      realtimeChannel.send({
+        type: 'broadcast',
+        event: 'session_ended',
+        payload: { room_code: activeSession.room_code }
+      });
+    }
+
     window.location.href = "teacher-dashboard.html";
   } catch (err) {
     console.error("End session failed:", err);
@@ -413,6 +443,17 @@ function initStudent() {
   function subscribeToSession(room) {
     realtimeChannel = supabaseClient
       .channel(`session:${room}`)
+      // Listen for broadcast events from teacher
+      .on('broadcast', { event: 'presentation_switch' }, payload => {
+        const { presentation_id, title, pdf_path, pdf_public_url } = payload.payload;
+        const changed = presentation_id !== activeSession.current_presentation_id;
+        activeSession = { ...activeSession, current_presentation_id: presentation_id, presentation_title: title, pdf_path, pdf_public_url };
+        if (changed) setPresentation(title, presentation_id, pdf_path, pdf_public_url);
+      })
+      .on('broadcast', { event: 'session_ended' }, payload => {
+        showSessionEnded();
+      })
+      // Fallback: also listen for postgres changes as backup
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
