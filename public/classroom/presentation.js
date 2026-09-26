@@ -1,13 +1,12 @@
 // ===== Presentation Viewer / Session Control =====
 // Depends on classroom.js.
 // Teacher mode: requires an active session (loads or redirects to dashboard).
-// Student mode: uses Supabase Realtime for instant presentation updates.
+// Student mode: uses focused polling (3s interval) for presentation updates.
 
-// Initialize Supabase client for Realtime
-const supabaseClient = window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-let realtimeChannel = null;
+const POLL_INTERVAL_MS = 3000;
 
 let activeSession = null;
+let studentPoll = null;
 
 // PDF.js state
 let pdfDoc = null;
@@ -19,7 +18,7 @@ function isTeacher() {
 }
 
 function showSessionEnded() {
-  if (realtimeChannel) { realtimeChannel.unsubscribe(); realtimeChannel = null; }
+  if (studentPoll) { clearInterval(studentPoll); studentPoll = null; }
   document.getElementById("sessionEnded").classList.remove("hidden");
 }
 
@@ -382,16 +381,49 @@ async function endSession() {
 // Fetch initial session data on join
 async function fetchInitialSession(room) {
   try {
-    console.log('[Realtime] Fetching initial session for room:', room);
+    console.log('[Polling] Fetching initial session for room:', room);
     const session = await activeSessionByCode(room);
-    console.log('[Realtime] Initial session fetched:', session ? 'found' : 'null');
+    console.log('[Polling] Initial session fetched:', session ? 'found' : 'null');
     if (!session) { showSessionEnded(); return; }
     activeSession = session;
-    console.log('[Realtime] Initial session loaded, presentation_id:', session.current_presentation_id);
+    console.log('[Polling] Initial session loaded, presentation_id:', session.current_presentation_id);
     setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path, session.pdf_public_url);
   } catch (err) {
-    console.error('[Realtime] fetchInitialSession error:', err);
+    console.error('[Polling] fetchInitialSession error:', err);
     showSessionEnded();
+  }
+}
+
+// Focused polling: check for presentation_id and status changes every 3 seconds
+async function pollActiveSession() {
+  try {
+    const session = await activeSessionByCode(activeSession.room_code);
+    if (!session) {
+      showSessionEnded();
+      return;
+    }
+    
+    // Check if status changed to 'ended'
+    if (session.status === 'ended') {
+      showSessionEnded();
+      return;
+    }
+    
+    // Check if presentation changed
+    const presentationChanged = session.current_presentation_id !== activeSession.current_presentation_id;
+    const titleChanged = session.presentation_title !== activeSession.presentation_title;
+    
+    if (presentationChanged || titleChanged) {
+      activeSession = session;
+      setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path, session.pdf_public_url);
+    }
+    
+    // Update local session state (for next comparison)
+    activeSession = session;
+    
+  } catch (err) {
+    console.error('[Polling] Error:', err);
+    // Don't stop polling on transient errors
   }
 }
 
@@ -411,98 +443,26 @@ function initStudent() {
   activeSession = { room_code: room, current_presentation_id: null, presentation_title: null };
   setPresentation("");
   
-  // Realtime subscription with reconnection logic
-  let reconnectAttempts = 0;
-  const maxReconnectAttempts = 10;
-  const baseReconnectDelay = 1000; // 1s
-  const maxReconnectDelay = 30000; // 30s max
-  
-  function subscribeToSession(room) {
-    // Channel topic matches database trigger: room:<room_code>:sessions
-    realtimeChannel = supabaseClient
-      .channel(`room:${room}:sessions`, {
-        config: { broadcast: { self: false } }
-      })
-      // Listen for database-triggered broadcasts
-      .on('broadcast', { event: '*' }, payload => {
-        console.log('[Realtime] Broadcast received:', JSON.stringify(payload, null, 2));
-        // Database trigger sends: { new, old, op, ... }
-        const session = payload.payload?.new;
-        const op = payload.payload?.op; // 'INSERT', 'UPDATE', 'DELETE'
-        console.log('[Realtime] Broadcast op:', op, 'session:', session ? 'exists' : 'null');
-        
-        if (!session || session.status === 'ended') {
-          console.log('[Realtime] Session ended or null, showing ended');
-          showSessionEnded();
-          return;
-        }
-        
-        const changed = session.current_presentation_id !== activeSession.current_presentation_id ||
-                        session.presentation_title !== activeSession.presentation_title;
-        activeSession = session;
-        
-        console.log('[Realtime] Session changed:', changed, 'presentation_id:', session.current_presentation_id);
-        
-        // Get presentation details for PDF
-        if (session.current_presentation_id) {
-          listPresentations().then(rows => {
-            const current = rows.find(p => p.id === session.current_presentation_id);
-            if (current) {
-              const pdfPublicUrl = current.pdf_path
-                ? `https://ruiikjyiqsfrzwqymixs.supabase.co/storage/v1/object/public/presentations/${current.pdf_path}`
-                : null;
-              setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path, pdfPublicUrl);
-            }
-          });
-        } else {
-          setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path, session.pdf_public_url);
-        }
-      })
-      .subscribe((status, err) => {
-        console.log('[Realtime] Subscription status:', status, err ? err.message : '');
-        if (status === 'SUBSCRIBED') {
-          console.log(`[Realtime] Subscribed to room ${room}:sessions`);
-          reconnectAttempts = 0; // Reset on success
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.warn(`[Realtime] Subscription error: ${status}`, err);
-          handleReconnect(room);
-        }
-      });
-  }
-  
-  function handleReconnect(room) {
-    if (reconnectAttempts >= 10) {
-      console.error('[Realtime] Max reconnect attempts reached');
-      showSessionEnded();
-      return;
-    }
-    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
-    reconnectAttempts++;
-    console.log(`[Realtime] Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/10)`);
-    setTimeout(() => subscribeToSession(room), delay);
-  }
-  
-  // Initial subscription
-  subscribeToSession(room);
-  
-  // Also fetch initial session data
+  // Fetch initial session data
   fetchInitialSession(room);
+  
+  // Start focused polling (every 3 seconds)
+  studentPoll = setInterval(pollActiveSession, POLL_INTERVAL_MS);
+  pollActiveSession(); // Immediate first check
 }
 
 function leaveRoom() {
-  if (realtimeChannel) { realtimeChannel.unsubscribe(); realtimeChannel = null; }
+  if (studentPoll) { clearInterval(studentPoll); studentPoll = null; }
   window.location.href = "join.html";
 }
 
 function showSessionEnded() {
-  console.log('[Realtime] showSessionEnded called');
-  if (realtimeChannel) { realtimeChannel.unsubscribe(); realtimeChannel = null; }
+  if (studentPoll) { clearInterval(studentPoll); studentPoll = null; }
   document.getElementById("sessionEnded").classList.remove("hidden");
 }
 
 function leaveRoom() {
-  console.log('[Realtime] leaveRoom called');
-  if (realtimeChannel) { realtimeChannel.unsubscribe(); realtimeChannel = null; }
+  if (studentPoll) { clearInterval(studentPoll); studentPoll = null; }
   window.location.href = "join.html";
 }
 
