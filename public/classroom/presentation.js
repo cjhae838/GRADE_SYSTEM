@@ -351,26 +351,6 @@ async function switchPresentation(id) {
   );
   if (!res.ok) throw new Error(`Failed to switch presentation (${res.status})`);
   activeSession = (await res.json())[0];
-
-  // Broadcast presentation switch to all students in the room
-  if (realtimeChannel) {
-    const current = activeSession.current_presentation_id
-      ? await listPresentations().then(rows => rows.find(p => p.id === activeSession.current_presentation_id))
-      : null;
-    if (current) {
-      realtimeChannel.send({
-        type: 'broadcast',
-        event: 'presentation_switch',
-        payload: {
-          presentation_id: current.id,
-          title: current.title,
-          pdf_path: current.pdf_path,
-          pdf_public_url: `https://ruiikjyiqsfrzwqymixs.supabase.co/storage/v1/object/public/presentations/${current.pdf_path}`
-        }
-      });
-    }
-  }
-
   await renderTeacherSession();
 }
 
@@ -388,15 +368,6 @@ async function endSession() {
       }
     );
     if (!res.ok) throw new Error(`Failed to end session (${res.status})`);
-
-    // Broadcast session ended to all students in the room
-    if (realtimeChannel) {
-      realtimeChannel.send({
-        type: 'broadcast',
-        event: 'session_ended',
-        payload: { room_code: activeSession.room_code }
-      });
-    }
 
     window.location.href = "teacher-dashboard.html";
   } catch (err) {
@@ -441,38 +412,44 @@ function initStudent() {
   const maxReconnectDelay = 30000; // 30s max
   
   function subscribeToSession(room) {
+    // Channel topic matches database trigger: room:<room_code>:sessions
     realtimeChannel = supabaseClient
-      .channel(`session:${room}`)
-      // Listen for broadcast events from teacher
-      .on('broadcast', { event: 'presentation_switch' }, payload => {
-        const { presentation_id, title, pdf_path, pdf_public_url } = payload.payload;
-        const changed = presentation_id !== activeSession.current_presentation_id;
-        activeSession = { ...activeSession, current_presentation_id: presentation_id, presentation_title: title, pdf_path, pdf_public_url };
-        if (changed) setPresentation(title, presentation_id, pdf_path, pdf_public_url);
+      .channel(`room:${room}:sessions`, {
+        config: { broadcast: { self: false } }
       })
-      .on('broadcast', { event: 'session_ended' }, payload => {
-        showSessionEnded();
-      })
-      // Fallback: also listen for postgres changes as backup
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'sessions',
-        filter: `room_code=eq.${room}`
-      }, payload => {
-        const session = payload.new;
+      // Listen for database-triggered broadcasts
+      .on('broadcast', { event: '*' }, payload => {
+        // Database trigger sends: { new, old, op, ... }
+        const session = payload.payload?.new;
+        const op = payload.payload?.op; // 'INSERT', 'UPDATE', 'DELETE'
+        
         if (!session || session.status === 'ended') {
           showSessionEnded();
           return;
         }
+        
         const changed = session.current_presentation_id !== activeSession.current_presentation_id ||
                         session.presentation_title !== activeSession.presentation_title;
         activeSession = session;
-        if (changed) setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path, session.pdf_public_url);
+        
+        // Get presentation details for PDF
+        if (session.current_presentation_id) {
+          listPresentations().then(rows => {
+            const current = rows.find(p => p.id === session.current_presentation_id);
+            if (current) {
+              const pdfPublicUrl = current.pdf_path
+                ? `https://ruiikjyiqsfrzwqymixs.supabase.co/storage/v1/object/public/presentations/${current.pdf_path}`
+                : null;
+              setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path, pdfPublicUrl);
+            }
+          });
+        } else {
+          setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path, session.pdf_public_url);
+        }
       })
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
-          console.log(`[Realtime] Subscribed to session ${room}`);
+          console.log(`[Realtime] Subscribed to room ${room}:sessions`);
           reconnectAttempts = 0; // Reset on success
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           console.warn(`[Realtime] Subscription error: ${status}`, err);
