@@ -325,7 +325,7 @@ async function renderTeacherSession() {
     picker.value = activeSession.current_presentation_id;
     const current = rows.find((p) => p.id === activeSession.current_presentation_id);
     const pdfPublicUrl = current?.pdf_path
-      ? `https://ruiikjyiqsfrzwqymixs.supabaseClient.co/storage/v1/object/public/presentations/${current.pdf_path}`
+      ? `https://ruiikjyiqsfrzwqymixs.supabase.co/storage/v1/object/public/presentations/${current.pdf_path}`
       : null;
     setPresentation(current ? current.title : "", current ? current.id : null, current ? current.pdf_path : null, pdfPublicUrl);
     document.getElementById("pickerHint").textContent = "Switch presentation anytime.";
@@ -404,29 +404,59 @@ function initStudent() {
   activeSession = { room_code: room, current_presentation_id: null, presentation_title: null };
   setPresentation("");
   
-  // Fetch initial session data
-  fetchInitialSession(room);
+  // Realtime subscription with reconnection logic
+  let reconnectAttempts = 0;
+  const maxReconnectAttempts = 10;
+  const baseReconnectDelay = 1000; // 1s
+  const maxReconnectDelay = 30000; // 30s max
   
-  // Subscribe to Realtime updates for this session
-  realtimeChannel = supabaseClient
-    .channel(`session:${room}`)
-    .on('postgres_changes', {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'sessions',
-      filter: `room_code=eq.${room}`
-    }, payload => {
-      const session = payload.new;
-      if (!session || session.status === 'ended') {
-        showSessionEnded();
-        return;
-      }
-      const changed = session.current_presentation_id !== activeSession.current_presentation_id ||
-                      session.presentation_title !== activeSession.presentation_title;
-      activeSession = session;
-      if (changed) setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path, session.pdf_public_url);
-    })
-    .subscribe();
+  function subscribeToSession(room) {
+    realtimeChannel = supabaseClient
+      .channel(`session:${room}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'sessions',
+        filter: `room_code=eq.${room}`
+      }, payload => {
+        const session = payload.new;
+        if (!session || session.status === 'ended') {
+          showSessionEnded();
+          return;
+        }
+        const changed = session.current_presentation_id !== activeSession.current_presentation_id ||
+                        session.presentation_title !== activeSession.presentation_title;
+        activeSession = session;
+        if (changed) setPresentation(session.presentation_title, session.current_presentation_id, session.pdf_path, session.pdf_public_url);
+      })
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`[Realtime] Subscribed to session ${room}`);
+          reconnectAttempts = 0; // Reset on success
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.warn(`[Realtime] Subscription error: ${status}`, err);
+          handleReconnect(room);
+        }
+      });
+  }
+  
+  function handleReconnect(room) {
+    if (reconnectAttempts >= 10) {
+      console.error('[Realtime] Max reconnect attempts reached');
+      showSessionEnded();
+      return;
+    }
+    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+    reconnectAttempts++;
+    console.log(`[Realtime] Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/10)`);
+    setTimeout(() => subscribeToSession(room), delay);
+  }
+  
+  // Initial subscription
+  subscribeToSession(room);
+  
+  // Also fetch initial session data
+  fetchInitialSession(room);
 }
 
 function leaveRoom() {
