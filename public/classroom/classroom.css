@@ -448,12 +448,16 @@ body {
   border-radius: var(--radius);
   box-shadow: var(--neo-outset);
   min-height: 500px;
-  padding: 0;
+  padding: 8px;
   display: none;
+  max-width: 90vw;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto;
 }
 
 .viewer-content.active {
-  display: block;
+  display: flex;
 }
 
 /* ===== Status Badge ===== */
